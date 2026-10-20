@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import type { Assessment } from '../ai/classification.service';
 @Injectable()
 export class CallsService {
  constructor(private readonly db:DataSource) {}
@@ -24,11 +25,46 @@ export class CallsService {
  }
  async transcriptLanguage(id:string):Promise<string> {const rows:any[]=await this.db.query('SELECT transcript_language FROM calls WHERE call_control_id=? LIMIT 1',[id]);return String(rows[0]?.transcript_language||'unknown');}
  async previousTranscript(id:string):Promise<string> {const rows:any[]=await this.db.query('SELECT transcript_original FROM calls WHERE call_control_id=? LIMIT 1',[id]);return String(rows[0]?.transcript_original||'');}
- async recordRelayTranscript(id:string, transcript:string, lang:string, assessment:{category:string;priority:string;decision:string;summary:string;source:string;language:string;confidence:number}) {
-  // Preserve multiple caller turns in their original language, not only the most recent turn.
-  await this.db.query(`UPDATE calls SET transcript_original=?,transcript_language=?,reason_text=?,category=?,priority=?,decision=?,ai_summary=?,classification_source=?,detected_language=?,classification_confidence=? WHERE call_control_id=?`,
-   [transcript.slice(0,6000),lang,transcript.slice(0,3000),assessment.category,assessment.priority,assessment.decision,assessment.summary,assessment.source,lang,assessment.confidence,id]);
- }
+async recordRelayTranscript(
+  id: string,
+  transcript: string,
+  lang: string,
+  assessment: Assessment
+) {
+  await this.db.query(
+    `UPDATE calls SET
+      transcript_original = ?,
+      transcript_language = ?,
+      reason_text = ?,
+      category = ?,
+      priority = ?,
+      decision = ?,
+      ai_summary = ?,
+      classification_source = ?,
+      detected_language = ?,
+      classification_confidence = ?,
+      caller_name = COALESCE(?, caller_name),
+      caller_organization = COALESCE(?, caller_organization),
+      callback_requested = COALESCE(?, callback_requested)
+    WHERE call_control_id = ?`,
+    [
+      transcript.slice(0, 6000),
+      lang,
+      transcript.slice(0, 3000),
+      assessment.category,
+      assessment.priority,
+      assessment.decision,
+      assessment.summary,
+      assessment.source,
+      lang,
+      assessment.confidence,
+      assessment.callerName ?? null,
+      assessment.organization ?? null,
+      assessment.callbackRequested ?? null,
+      id,
+    ]
+  );
+}
  async recordTranscription(id:string,transcript:string,language:string,assessment:{category:string;priority:string;decision:string;summary:string;source:string;language:string;confidence:number}) {
   await this.db.query(`UPDATE calls SET transcript_original=?,transcript_language=?,reason_text=?,category=?,priority=?,decision=?,ai_summary=?,classification_source=?,detected_language=?,classification_confidence=? WHERE call_control_id=?`,
    [transcript.slice(0,6000),language,transcript.slice(0,3000),assessment.category,assessment.priority,assessment.decision,assessment.summary,assessment.source,assessment.language,assessment.confidence,id]);
