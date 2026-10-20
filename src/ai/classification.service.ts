@@ -16,6 +16,9 @@ export interface Assessment {
   callerName?: string | null;
   organization?: string | null;
   callbackRequested?: boolean | null;
+  callbackPhone?: string | null;
+  callbackPhoneConfirmed?: boolean;
+  callbackPhoneSource?: 'CALLER_ID' | 'PROVIDED' | null;
 }
 
 @Injectable()
@@ -155,6 +158,16 @@ if (known) {
   callbackRequested: {
     type: ['boolean', 'null'],
   },
+  callbackPhone: {
+    type: ['string', 'null'],
+  },
+  callbackPhoneConfirmed: {
+    type: 'boolean',
+  },
+  callbackPhoneSource: {
+    type: ['string', 'null'],
+    enum: ['CALLER_ID', 'PROVIDED', null],
+  },
 },
 
 required: [
@@ -166,6 +179,9 @@ required: [
   'callerName',
   'organization',
   'callbackRequested',
+  'callbackPhone',
+  'callbackPhoneConfirmed',
+  'callbackPhoneSource',
 ],
             }}},
             messages:[
@@ -207,6 +223,22 @@ Do not invent names, organizations, phone numbers, or facts.
 
 Provide a concise summary of the caller's actual purpose,
 including requested action, in the original language.
+
+Extract callback phone information.
+
+If the caller explicitly provides a phone number for a callback,
+return it in callbackPhone.
+
+For a phone number provided verbally, use callbackPhoneSource
+"PROVIDED".
+
+If no callback number is provided, return null.
+
+Set callbackPhoneConfirmed to true only when the caller explicitly
+confirms the specific callback number after it has been repeated.
+
+Do not invent missing digits.
+Do not confuse phone numbers with dates, extensions, or reference numbers.
                 `},
               {role:'user',content:message.slice(0,2000)}]
           })
@@ -258,6 +290,20 @@ const callbackRequested: boolean | null =
           ? out.summary.slice(0, 400)
           : message.slice(0, 400);
 
+      const callbackPhone =
+      typeof out.callbackPhone === 'string'
+        ? out.callbackPhone.trim().slice(0, 25)
+        : null;
+
+      const callbackPhoneConfirmed =
+        out.callbackPhoneConfirmed === true;
+
+      const callbackPhoneSource =
+        callbackPhone &&
+        out.callbackPhoneSource === 'PROVIDED'
+          ? 'PROVIDED' as const
+          : null;
+
       // Si OpenAI sospecha SPAM, pero no tiene suficiente
       // confianza, tratamos la llamada como UNKNOWN.
       if (
@@ -275,7 +321,9 @@ const callbackRequested: boolean | null =
           callerName,
           organization,
           callbackRequested,
-
+          callbackPhone,
+          callbackPhoneConfirmed,
+          callbackPhoneSource,
         };
       }
 
@@ -298,6 +346,9 @@ const callbackRequested: boolean | null =
         callerName,
         organization,
         callbackRequested,
+        callbackPhone,
+        callbackPhoneConfirmed,
+        callbackPhoneSource,
 
       };
     } catch(e) {
