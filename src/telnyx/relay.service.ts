@@ -920,6 +920,62 @@ const conversationLanguage: Language =
 
 s.lang = conversationLanguage;
 
+// v0.10.1 - Early Spam Screening
+// Rechazo local sin consultas a OpenAI.
+
+if (process.env.EARLY_SPAM_SCREENING !== 'false') {
+  const screening = this.quickScreen(turn);
+
+  if (screening.action === 'REJECT') {
+    const ctx = await this.calls.callerContext(s.id);
+
+    // No rechazamos automáticamente contactos conocidos.
+    if (ctx?.contact_id != null) {
+      this.log.log(
+        'RELAY: Sales signal detected, but known contact was preserved'
+      );
+    } else {
+      const category = screening.category ?? 'SALES';
+      const reason =
+        screening.reason ?? 'Unsolicited commercial solicitation';
+
+      this.log.log(
+        `RELAY: Early screening matched category=${category}`
+      );
+
+      await this.calls.recordEarlyRejection(
+        s.id,
+        combined,
+        conversationLanguage,
+        category,
+        reason,
+      );
+
+      this.log.log(
+        'RELAY: Early rejection saved; no OpenAI request'
+      );
+
+      // No se genera respuesta de IA ni audio de despedida.
+      // Terminamos inmediatamente después de guardar.
+      try {
+        if (!(await this.calls.isEnded(s.id))) {
+          await this.telnyx.hangup(s.id);
+        }
+
+        this.log.log('RELAY: Sales call ended');
+      } catch (error) {
+        if (!(error instanceof TelnyxCallEndedError)) {
+          this.log.error(
+            `RELAY: Early hangup failed: ${String(error)}`
+          );
+        }
+      }
+
+      return;
+    }
+  }
+}
+
 // Callback verification is handled deterministically using ordered turns.
 // An isolated "sí" only confirms a number if we previously asked THAT number.
 const callerPhone = this.phoneInTurn(turn);
@@ -1210,7 +1266,7 @@ setTimeout(() => {
 
   })();
 
-}, Number(process.env.RELAY_GOODBYE_DELAY_MS || 12000));
+}, this.goodbyeDelay(goodbye));
 
 // End frame is not immediate: the TTS response must be audible first.
 
@@ -1265,4 +1321,63 @@ private detectSpokenLanguage(text: string): Language | null {
   return null;
 }
 
+private goodbyeDelay(text: string): number {
+  const minMs = Number(process.env.RELAY_GOODBYE_MIN_MS || 3000);
+  const maxMs = Number(process.env.RELAY_GOODBYE_MAX_MS || 15000);
+  const wordsPerMinute = Number(
+    process.env.RELAY_GOODBYE_WORDS_PER_MINUTE || 130
+  );
+  const marginMs = Number(
+    process.env.RELAY_GOODBYE_MARGIN_MS || 1500
+  );
+
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+
+  const estimatedMs =
+    (words / Math.max(1, wordsPerMinute)) * 60000 + marginMs;
+
+  return Math.round(
+    Math.max(minMs, Math.min(maxMs, estimatedMs))
+  );
+}
+private quickScreen(text: string): {
+  action: 'CONTINUE' | 'REJECT';
+  category?: 'SALES' | 'SPAM';
+  reason?: string;
+} {
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const salesPatterns = [
+    // English
+    /\b(?:calling|reaching out|contacting you) to (?:sell|offer|promote)\b/,
+    /\b(?:extended|vehicle|car) warranty (?:offer|promotion|coverage)\b/,
+    /\b(?:we have|we're offering|we are offering) (?:a |an )?(?:special|exclusive|limited.time) (?:offer|promotion|deal)\b/,
+    /\b(?:calling about|calling to offer) (?:a |our )?(?:solar panel|marketing service|advertising package)\b/,
+
+    // Español
+    /\b(?:llamamos|llamo|contactamos) para (?:venderle|ofrecerle|promocionar)\b/,
+    /\b(?:tenemos|le ofrecemos) (?:una |un )?(?:oferta especial|promocion exclusiva)\b/,
+    /\b(?:queremos|quisieramos) venderle\b/,
+    /\b(?:le llamamos|estamos llamando) por una promocion\b/,
+  ];
+
+  const clearSales = salesPatterns.some(pattern =>
+    pattern.test(normalized)
+  );
+
+  if (clearSales) {
+    return {
+      action: 'REJECT',
+      category: 'SALES',
+      reason: 'Clear unsolicited sales pitch',
+    };
+  }
+
+  return { action: 'CONTINUE' };
+}
 }

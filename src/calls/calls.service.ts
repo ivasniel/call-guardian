@@ -207,5 +207,38 @@ private extractCallbackPhone(transcript: string): string | null {
       [transcript.slice(0, 6000), language, transcript.slice(0, 3000), assessment.category, assessment.priority, assessment.decision, assessment.summary, assessment.source, assessment.language, assessment.confidence, id],
     );
   }
-  
+  async recordEarlyRejection(
+  id: string,
+  transcript: string,
+  language: 'es' | 'en',
+  category: 'SALES' | 'SPAM',
+  reason: string,
+): Promise<void> {
+  await this.db.query(
+    `UPDATE calls SET
+      transcript_original = ?,
+      transcript_language = ?,
+      reason_text = ?,
+      category = ?,
+      priority = 'LOW',
+      decision = 'SPAM',
+      ai_summary = ?,
+      classification_source = 'RULES',
+      detected_language = ?,
+      classification_confidence = 0.95,
+      callback_requested = 0,
+      processing_phase = 'RELAY_DONE'
+    WHERE call_control_id = ?
+      AND processing_phase = 'RELAY'`,
+    [
+      transcript.slice(0, 6000),
+      language,
+      transcript.slice(0, 3000),
+      category,
+      reason.slice(0, 400),
+      language,
+      id,
+    ],
+  );
+}
 }
