@@ -15,6 +15,7 @@ import { TelnyxService, TelnyxCallEndedError }
   from './telnyx.service';
 
 type Language = 'es' | 'en';
+type CallbackSource = 'CALLER_ID' | 'PROVIDED';
 type ConversationTurn = { role: 'user' | 'assistant'; content: string };
 
 interface Session {
@@ -25,6 +26,9 @@ interface Session {
 
   turns: string[];
   history: ConversationTurn[];
+  callerId: string | null;
+  awaitingPhoneConfirmation: boolean;
+  awaitingReplacementPhone: boolean;
 
   busy: boolean;
 
@@ -33,6 +37,10 @@ interface Session {
   asking: boolean;
 
   followUps: number;
+
+  callbackPhone?: string;
+  callbackPhoneSource?: 'CALLER_ID' | 'PROVIDED';
+  callbackPhoneConfirmed?: boolean;
 
 }
 
@@ -45,6 +53,50 @@ export class RelayService {
  constructor(private readonly calls:CallsService,private readonly classifier:ClassificationService, 
 
   private readonly telnyx: TelnyxService,) {}
+
+  private isPhoneConfirmation(text: string): boolean {
+    const normalized = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[.,!?¿¡']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Rechazos explícitos: tienen prioridad.
+    const negative =
+      /^(no|nope|nah|incorrect|wrong|not correct|that s wrong|ese no|no es correcto|esta mal|no ese no)\b/.test(
+        normalized
+      );
+
+    if (negative) return false;
+
+    const confirmations = [
+      // Español
+      /^si\b/,
+      /^correcto$/,
+      /^exacto$/,
+      /^asi es$/,
+      /^ese (es|mismo)/,
+      /^ese numero/,
+      /^esta bien$/,
+      /^afirmativo$/,
+
+      // Inglés
+      /^yes\b/,
+      /^yeah\b/,
+      /^yep\b/,
+      /^yup\b/,
+      /^correct$/,
+      /^exactly$/,
+      /^that s (right|correct|the one)$/,
+      /^that is (right|correct|the one)$/,
+      /^you got it$/,
+      /^right number$/,
+    ];
+
+    return confirmations.some(pattern => pattern.test(normalized));
+  }
 
 attach(server: Server): void {
 
@@ -208,6 +260,9 @@ attach(server: Server): void {
 
       turns: [],
     history: [],
+    callerId: null,
+    awaitingPhoneConfirmation: false,
+    awaitingReplacementPhone: false,
 
       busy: false,
 
@@ -313,6 +368,68 @@ attach(server: Server): void {
 
  }
 
+ private normalizeUsPhone(value: string): string | null {
+   const digits = value.replace(/\D/g, '');
+   if (digits.length === 10 && /^[2-9]\d{2}[2-9]\d{6}$/.test(digits)) return `+1${digits}`;
+   if (digits.length === 11 && digits.startsWith('1') && /^[2-9]\d{2}[2-9]\d{6}$/.test(digits.slice(1))) return `+${digits}`;
+   return null;
+ }
+
+ private phoneInTurn(text: string): string | null {
+   // Only a single recognizable 10-digit US/Canada phone number per turn.
+   const matches = [...text.matchAll(/(?:^|[^\d])((?:\+?1[\s().-]*)?[2-9]\d{2}[\s().-]*[2-9]\d{2}[\s().-]*\d{4})(?!\d)/g)];
+   if (matches.length !== 1) return null;
+   return this.normalizeUsPhone(matches[0][1]);
+ }
+
+ private yes(text: string): boolean {
+   return /^(?:s[ií]|correcto|exacto|as[ií] es|afirmativo|yes|yeah|yep|correct|that's right|that's correct|right)(?:[\s.,!]+(?:gracias|thank you|thanks))?[\s.!]*$/i.test(text.trim());
+ }
+ private no(text: string): boolean {
+   return /^(?:no|nope|incorrecto|equivocado|not correct|that's wrong|not that one)\b/i.test(text.trim());
+ }
+  private sameNumber(text: string): boolean {
+    const normalized = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[.,!?¿¡']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return [
+      // Español
+      /\b(este mismo numero|al mismo numero|este numero)\b/,
+      /\b(mejor este|prefiero este|el mismo)\b/,
+      /\b(pueden llamarme aqui|llameme a este)\b/,
+      /\b(el numero desde el que llamo)\b/,
+
+      // Inglés
+      /\b(same number|this number)\b/,
+      /\b(i prefer this one|i prefer this number)\b/,
+      /\b(use this one|use this number)\b/,
+      /\b(call me back at this number)\b/,
+      /\b(the number i am calling from)\b/,
+    ].some(pattern => pattern.test(normalized));
+  }
+ private askedForCallback(history: ConversationTurn[]): boolean {
+   const last = [...history].reverse().find(t => t.role === 'assistant');
+   return !!last && /\b(?:n[uú]mero|tel[eé]fono|devolver.*llamada|llamarle|callback|call you back|call back|phone|number)\b/i.test(last.content);
+ }
+ private phoneQuestion(phone: string, language: Language): string {
+   // Read digit by digit: keep punctuation simple for Soniox voice synthesis.
+   const digits = phone.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+   const spelled = digits.split('').join(', ');
+   return language === 'es'
+     ? `¿Me confirma que el número es ${spelled}?`
+     : `Can you confirm the number is ${spelled}?`;
+ }
+ private say(ws: WebSocket, s: Session, reply: string, language: Language): void {
+   s.history.push({ role: 'assistant', content: reply });
+   this.send(ws, { type: 'language', ttsLanguage: language === 'es' ? 'es-ES' : 'en-US' });
+   this.send(ws, { type: 'text', token: reply, last: true });
+ }
+
  private async planConversation(
 
   history: ConversationTurn[],
@@ -320,10 +437,14 @@ attach(server: Server): void {
   language: Language,
 
   followUps: number,
+  callbackStatus: string,
 
 ): Promise<{ action: 'ASK' | 'FINISH'; reply: string }> {
 
-  const maxFollowUps = 4;
+  const maxFollowUps = Math.max(
+    1,
+    Number(process.env.RELAY_MAX_FOLLOWUPS || 6)
+  );
 
   const fallbackReply = language === 'es'
 
@@ -556,6 +677,9 @@ predominantly used by the caller.
 
 Be patient with callers who speak imperfect Spanish or English.
 
+CALLBACK STATUS FROM VERIFIED APPLICATION STATE: ${callbackStatus}.
+If callback is confirmed, never ask for callback details again.
+If it is pending confirmation, the application will handle confirmation separately.
 Return JSON only.`,
 
             },
@@ -632,39 +756,47 @@ Return JSON only.`,
   }
 
 }
+private extractPhoneFromSpeech(text: string): string | null {
+  const matches = [
+    ...text.matchAll(
+      /(?:^|[^\d])(?:\+?1[\s().-]*)?(\d{3})[\s().-]*(\d{3})[\s().-]*(\d{4})(?!\d)/g
+    ),
+  ];
+
+  if (matches.length !== 1) return null;
+
+  const [, area, prefix, line] = matches[0];
+
+  return `+1${area}${prefix}${line}`;
+}
 
  private async handle(ws:WebSocket,s:Session,raw:string):Promise<void>{
 
   let frame:any;try{frame=JSON.parse(raw);}catch{return;}
 
 if (frame.type === 'setup') {
+  const from = String(frame.from || '').trim();
 
-  this.log.log('RELAY setup recibido');
+  const phoneFromDb = await this.calls.callerPhone(s.id);
+
+  const candidate = /^\+[1-9]\d{7,14}$/.test(from)
+    ? from
+    : phoneFromDb;
+
+  s.callerId =
+    candidate && /^\+[1-9]\d{7,14}$/.test(candidate)
+      ? candidate
+      : null;
 
   this.log.log(
-
-    `Call ID matches: ${
-
-      frame.callControlId === s.id
-
-    }`
-
+    `RELAY: Caller ID available=${Boolean(s.callerId)}`
   );
 
-  // // Prueba de síntesis de voz directamente desde NestJS.
-
-  // this.send(ws, {
-
-  //   type: 'text',
-
-  //   token: 'Hello?',
-
-  //   last: true,
-
-  // });
+  this.log.log(
+    `Call ID matches: ${frame.callControlId === s.id}`
+  );
 
   return;
-
 }
 
 if (frame.type === 'prompt') {
@@ -689,34 +821,68 @@ if (await this.calls.phase(s.id) === 'RELAY_DONE') {
 
 }
 
-  if(frame.type==='error'){this.log.warn(`Telnyx relay: ${String(frame.description||'error').slice(0,200)}`);return;}
+if(frame.type==='error'){this.log.warn(`Telnyx relay: ${String(frame.description||'error').slice(0,200)}`);return;}
 
-  if(frame.type!=='prompt'||frame.last!==true)return;
+if(frame.type!=='prompt'||frame.last!==true)return;
 
-  const text=String(frame.voicePrompt||'').trim().slice(0,1500);
+const text=String(frame.voicePrompt||'').trim().slice(0,1500);
 
-  if(!text)return;
+if(!text)return;
 
-  s.pending.push(text);
+s.pending.push(text);
 
-  if(s.busy)return;
+if(s.busy)return;
 
-  s.busy=true;
+s.busy=true;
 
-  try {
+try {
 
-   while(s.pending.length){
+  while(s.pending.length){
 
-    const turn=s.pending.shift()!;
+  const turn=s.pending.shift()!;
+  const spokenPhone = this.extractPhoneFromSpeech(turn);
 
-    s.turns.push(turn);
-   s.history.push({ role: 'user', content: turn });
+  if (spokenPhone) {
+    // Si ya estábamos confirmando otro número,
+    // este nuevo número se considera una corrección.
+    if (spokenPhone !== s.callbackPhone) {
+      s.callbackPhone = spokenPhone;
+      s.callbackPhoneSource = 'PROVIDED';
+      s.callbackPhoneConfirmed = false;
+      s.awaitingPhoneConfirmation = false;
 
-    const combined=s.turns.join(' ').slice(0,6000);
+      this.log.log(
+        'RELAY: Callback phone captured; confirmation required'
+      );
+    }
+  }
+  this.log.log(
+  `CALLBACK DEBUG: awaiting=${s.awaitingPhoneConfirmation}, ` +
+  `phone=${s.callbackPhone ?? 'NULL'}, ` +
+  `confirmed=${s.callbackPhoneConfirmed ?? false}, ` +
+  `confirmationDetected=${this.isPhoneConfirmation(turn)}, ` +
+  `text=${turn}`
+);
 
-    const spokenLanguage =
+  if (
+    s.awaitingPhoneConfirmation &&
+    s.callbackPhone &&
+    this.isPhoneConfirmation(turn)
+  ) {
+    s.callbackPhoneConfirmed = true;
+    s.awaitingPhoneConfirmation = false;
 
-  this.detectSpokenLanguage(combined);
+    this.log.log(
+      'RELAY: Callback phone explicitly confirmed'
+    );
+  }
+
+  s.turns.push(turn);
+  s.history.push({ role: 'user', content: turn });
+
+  const combined=s.turns.join(' ').slice(0,6000);
+
+  const spokenLanguage = this.detectSpokenLanguage(turn);
 
 const lang =
 
@@ -754,6 +920,105 @@ const conversationLanguage: Language =
 
 s.lang = conversationLanguage;
 
+// Callback verification is handled deterministically using ordered turns.
+// An isolated "sí" only confirms a number if we previously asked THAT number.
+const callerPhone = this.phoneInTurn(turn);
+const callerSaysSame = this.sameNumber(turn);
+const previousAssistantQuestion = [...s.history]
+  .slice(0, -1)
+  .reverse()
+  .find(t => t.role === 'assistant')
+  ?.content || '';
+
+const askedAboutIncomingNumber =
+  /(?:this|same|current|incoming)(?:\s+\w+){0,4}\s+number|(?:este|mismo)(?:\s+\w+){0,4}\s+n[uú]mero/i
+    .test(previousAssistantQuestion) &&
+  /call|callback|llam|devolv/i.test(previousAssistantQuestion);
+
+const acceptedIncomingNumber =
+  /^(?:yes|yeah|yep|yup|si|sí|correct|correcto)\b/i.test(turn.trim()) &&
+  !/\b(?:but|except|pero|no|different|otro)\b/i.test(turn);
+
+if (
+  s.callerId &&
+  !callerPhone &&
+  askedAboutIncomingNumber &&
+  (this.sameNumber(turn) || acceptedIncomingNumber)
+) {
+  s.callbackPhone = s.callerId;
+  s.callbackPhoneSource = 'CALLER_ID';
+  s.callbackPhoneConfirmed = true;
+
+  s.awaitingPhoneConfirmation = false;
+  s.awaitingReplacementPhone = false;
+
+  this.log.log(
+    'RELAY: Incoming number explicitly accepted'
+  );
+}
+// El número de origen se procesa por separado
+// cuando el llamante lo acepta explícitamente.
+
+if (
+  spokenPhone &&
+  s.callbackPhoneSource === 'PROVIDED' &&
+  !s.callbackPhoneConfirmed &&
+  !s.awaitingPhoneConfirmation
+) {
+  s.awaitingPhoneConfirmation = true;
+
+  const reply = this.phoneQuestion(
+    s.callbackPhone!,
+    conversationLanguage
+  );
+
+  this.say(ws, s, reply, conversationLanguage);
+  continue;
+}
+
+if (
+  s.awaitingPhoneConfirmation &&
+  s.callbackPhone &&
+  this.no(turn) &&
+  !spokenPhone
+) {
+  s.awaitingPhoneConfirmation = false;
+  s.callbackPhoneConfirmed = false;
+  s.awaitingReplacementPhone = true;
+
+  this.say(
+    ws,
+    s,
+    conversationLanguage === 'es'
+      ? 'Entiendo. ¿Cuál es el número correcto?'
+      : 'Understood. What is the correct number?',
+    conversationLanguage
+  );
+
+  continue;
+}
+if (
+  callerSaysSame &&
+  s.callerId &&
+  this.askedForCallback(s.history.slice(0, -1))
+) {
+  // El llamante acepta utilizar el número de origen.
+  s.callbackPhone = s.callerId;
+  s.callbackPhoneSource = 'CALLER_ID';
+  s.callbackPhoneConfirmed = true;
+  s.awaitingPhoneConfirmation = false;
+  s.awaitingReplacementPhone = false;
+
+  this.log.log(
+    'RELAY: Caller explicitly accepted incoming number for callback'
+  );
+}
+
+const callbackStatus = s.callbackPhoneConfirmed
+  ? `CONFIRMED: ${s.callbackPhoneSource}. Do not ask again.`
+  : s.callbackPhone
+    ? `UNCONFIRMED: ${s.callbackPhoneSource}. Do not claim verification.`
+    : 'NO CALLBACK NUMBER CONFIRMED';
 const planningStarted = performance.now();
 
 const plan = await this.planConversation(
@@ -763,6 +1028,7 @@ const plan = await this.planConversation(
   conversationLanguage,
 
   s.followUps,
+  callbackStatus,
 
 );
 
@@ -772,42 +1038,56 @@ this.log.log(
 
 );
 
-if (plan.action === 'ASK' && s.followUps < 4) {
+// Si hay un número pendiente de confirmar,
+// no debemos terminar la conversación todavía.
+if (
+  s.awaitingPhoneConfirmation &&
+  !s.callbackPhoneConfirmed
+) {
+  this.log.log(
+    'RELAY: Phone confirmation pending; keep call active'
+  );
+}
 
+const maxFollowUps = Math.max(
+  1,
+  Number(process.env.RELAY_MAX_FOLLOWUPS || 6)
+);
+
+if (plan.action === 'ASK' && s.followUps < maxFollowUps) {
   s.followUps++;
- s.history.push({ role: 'assistant', content: plan.reply });
 
-  this.send(ws, {
+  // Detectar si el agente está solicitando
+  // confirmar el número que ya tenemos guardado.
+  const isAskingToConfirmPhone =
+    Boolean(s.callbackPhone) &&
+    !s.callbackPhoneConfirmed &&
+    /confirm|correct|correcto|confirma|es este|is that|is this/i.test(
+      plan.reply
+    ) &&
+    /número|numero|number|teléfono|telefono|phone|\d{3}/i.test(
+      plan.reply
+    );
 
-    type: 'language',
+  if (isAskingToConfirmPhone) {
+    s.awaitingPhoneConfirmation = true;
 
-    ttsLanguage:
+    this.log.log(
+      'RELAY: Awaiting callback phone confirmation'
+    );
+  }
 
-      conversationLanguage === 'es' ? 'es-ES' : 'en-US',
-
-  });
-
-  this.send(ws, {
-
-    type: 'text',
-
-    token: plan.reply,
-
-    last: true,
-
-  });
+  // El agente formula la pregunta.
+  this.say(ws, s, plan.reply, conversationLanguage);
 
   this.log.log(
-
-    `RELAY follow-up ${s.followUps}: ${plan.reply}`,
-
+    `RELAY follow-up ${s.followUps}: ${plan.reply}`
   );
 
   continue;
-
 }
 
-    const ctx=await this.calls.callerContext(s.id);
+const ctx=await this.calls.callerContext(s.id);
 
 const classificationStarted = performance.now();
 
@@ -819,6 +1099,17 @@ const assessment = await this.classifier.assess(
 
 );
 
+if (s.callbackPhone && s.callbackPhoneSource) {
+  assessment.callbackPhone = s.callbackPhone;
+  assessment.callbackPhoneSource = s.callbackPhoneSource;
+  assessment.callbackPhoneConfirmed =
+    s.callbackPhoneConfirmed === true;
+}
+this.log.log(
+  `CALLBACK SAVE: source=${assessment.callbackPhoneSource}, ` +
+  `hasPhone=${Boolean(assessment.callbackPhone)}, ` +
+  `confirmed=${assessment.callbackPhoneConfirmed}`
+);
 this.log.log(
 
   `PERF: classification=${Math.round(performance.now() - classificationStarted)}ms`
@@ -847,30 +1138,24 @@ this.log.log(
 
 }
 
+// Callback state from the actual dialogue supersedes AI inference.
+// A rule-based classification may skip OpenAI entirely.
+// If the caller stated no usable number, do not manufacture confirmation.
+
 await this.calls.recordRelayTranscript(
-
   s.id,
-
   combined,
-
   resolved,
-
   assessment,
-
 );
 
 await this.calls.setPhase(s.id, 'RELAY_DONE');
 
 const goodbye =
-
   plan.action === 'FINISH'
-
     ? plan.reply
-
     : resolved === 'es'
-
       ? 'Gracias por la información. He tomado nota.'
-
       : 'Thank you for the information. I have noted it.';
 
 this.send(ws, {
@@ -925,11 +1210,9 @@ setTimeout(() => {
 
   })();
 
-}, 6000);
+}, Number(process.env.RELAY_GOODBYE_DELAY_MS || 12000));
 
-return;
-
-    // End frame is not immediate: the TTS response must be audible first.
+// End frame is not immediate: the TTS response must be audible first.
 
     // Caller can hang up; Telnyx handles that naturally. A max duration guard belongs upstream.
 
@@ -941,42 +1224,45 @@ return;
 
  }
 
-  private detectSpokenLanguage(text: string): 'es' | 'en' | null {
+private detectSpokenLanguage(text: string): Language | null {
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
-    const normalized = text.toLowerCase();
+  const spanishPatterns = [
+    /\b(buenos dias|buenas tardes|buenas noches)\b/g,
+    /\b(necesito|quisiera|gustaria|quiero|llamar|llamada)\b/g,
+    /\b(por favor|mi nombre es|me llamo)\b/g,
+    /\b(puede|podria|hablar|devolver|numero)\b/g,
+    /\b(este|mismo|prefiero|gracias|usted)\b/g,
+    /\b(para|porque|estamos|con)\b/g,
+  ];
 
-    const spanish = [
+  const englishPatterns = [
+    /\b(good morning|good afternoon|good evening)\b/g,
+    /\b(my name is|i need|i want|i would like)\b/g,
+    /\b(talk to|speak to|call me|call back)\b/g,
+    /\b(this number|same number|personal matter)\b/g,
+    /\b(please|thank you|thanks|hello)\b/g,
+    /\b(can|could|would|should|prefer)\b/g,
+    /\b(the|with|about|it's|this|that)\b/g,
+  ];
 
-      /\b(hola|buenos días|buenas tardes|quisiera|gustaría)\b/i,
+  const score = (patterns: RegExp[]): number =>
+    patterns.reduce(
+      (total, pattern) =>
+        total + [...normalized.matchAll(pattern)].length,
+      0,
+    );
 
-      /\b(llamar|llamada|mensaje|entrevista|trabajo)\b/i,
+  const esScore = score(spanishPatterns);
+  const enScore = score(englishPatterns);
 
-      /\b(por favor|gracias|necesito hablar|me puede)\b/i,
+  if (enScore > esScore) return 'en';
+  if (esScore > enScore) return 'es';
 
-    ];
-
-    const english = [
-
-      /\b(hello|hi|good morning|good afternoon)\b/i,
-
-      /\b(i am calling|i'm calling|i need|i would like)\b/i,
-
-      /\b(can i speak|may i speak|please|message)\b/i,
-
-      /\b(interview|job|recruiter|call me back)\b/i,
-
-    ];
-
-    const esScore = spanish.filter((r) => r.test(normalized)).length;
-
-    const enScore = english.filter((r) => r.test(normalized)).length;
-
-    if (enScore > esScore) return 'en';
-
-    if (esScore > enScore) return 'es';
-
-    return null;
-
-  }
+  return null;
+}
 
 }

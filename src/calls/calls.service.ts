@@ -86,6 +86,11 @@ export class CallsService {
     lang: string,
     assessment: Assessment,
   ): Promise<void> {
+    console.log('CALLBACK ASSESSMENT RECEIVED:', {
+  confirmed: assessment.callbackPhoneConfirmed,
+  source: assessment.callbackPhoneSource,
+  hasPhone: Boolean(assessment.callbackPhone),
+});
     // Preferimos el número extraído por el clasificador.
     // Usamos el respaldo solo cuando identifica un único número.
     const aiPhone =
@@ -104,20 +109,31 @@ export class CallsService {
 
     // Un número aportado por el llamante se marca como PROVIDED.
     // Nunca asignamos CALLER_ID sin verificar el número de origen.
-    const callbackPhoneSource = safePhone
-      ? 'PROVIDED'
-      : null;
+    const callbackPhoneSource =
+      safePhone &&
+      (
+        assessment.callbackPhoneSource === 'CALLER_ID' ||
+        assessment.callbackPhoneSource === 'PROVIDED'
+      )
+        ? assessment.callbackPhoneSource
+        : safePhone
+          ? 'PROVIDED'
+          : null;
 
     // Solo consideramos confirmado un número que el clasificador
     // extrajo y cuya confirmación reconoció explícitamente.
     // La extracción mediante regex nunca confirma el número.
     const callbackPhoneConfirmed = Boolean(
       safePhone &&
-      aiPhone &&
-      assessment.callbackPhoneSource === 'PROVIDED' &&
+      callbackPhoneSource &&
       assessment.callbackPhoneConfirmed === true
     );
-
+console.log('CALLBACK DB DEBUG:', {
+  hasPhone: Boolean(safePhone),
+  source: callbackPhoneSource,
+  assessmentConfirmed: assessment.callbackPhoneConfirmed,
+  finalConfirmed: callbackPhoneConfirmed,
+});
     await this.db.query(
       `UPDATE calls SET
         transcript_original = ?,
@@ -191,4 +207,5 @@ private extractCallbackPhone(transcript: string): string | null {
       [transcript.slice(0, 6000), language, transcript.slice(0, 3000), assessment.category, assessment.priority, assessment.decision, assessment.summary, assessment.source, assessment.language, assessment.confidence, id],
     );
   }
+  
 }
