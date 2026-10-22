@@ -15,6 +15,10 @@ import {
   AccountSettings,
   AccountSettingsApiService,
 } from '../../services/account-settings.service';
+import {
+  AccountPhonesService,
+  AccountPhone,
+} from '../../services/account-phones.service';
 
 type SettingsTab = 'profile' | 'agent' | 'phone';
 
@@ -61,6 +65,7 @@ export class Settings implements OnInit {
   private readonly accountApi = inject(AccountSettingsApiService);
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly phonesApi = inject(AccountPhonesService);
 
   activeTab: SettingsTab = 'profile';
 
@@ -88,11 +93,14 @@ export class Settings implements OnInit {
 
   // Phone Settings sigue sin conexión con el backend.
   // No mostramos números inventados.
-  phoneLines: PhoneLine[] = [];
+  phoneLines: AccountPhone[] = [];
+  phonesLoading = false;
+  phonesError = '';
 
   ngOnInit(): void {
     this.loadProfile();
     this.loadAgent();
+    this.loadPhones();
   }
 
   changeTab(tab: SettingsTab): void {
@@ -260,4 +268,33 @@ export class Settings implements OnInit {
       'Phone line status has not been changed in Telnyx or MySQL.',
     );
   }
+
+
+loadPhones(): void {
+  this.phonesLoading = true;
+  this.phonesError = '';
+
+  this.phonesApi.getAll()
+    .pipe(
+      finalize(() => {
+        this.phonesLoading = false;
+        this.cdr.markForCheck();
+      }),
+    )
+    .subscribe({
+      next: phones => {
+        this.phoneLines = phones;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.phonesError = 'Unable to load phone numbers.';
+        this.notify.error(
+          'Phone numbers unavailable',
+          this.phonesError,
+        );
+        this.cdr.markForCheck();
+      },
+    });
+}
+
 }

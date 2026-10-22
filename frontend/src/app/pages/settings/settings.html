@@ -287,50 +287,65 @@
       }
 
       <!-- PHONE SETTINGS -->
+
       @if (activeTab === 'phone') {
         <section class="panel">
           <div class="panel-heading">
             <h2>Phone Settings</h2>
             <p>
-              Manage phone numbers associated with
-              your AI receptionist.
+              View the phone numbers connected to your
+              AI receptionist.
             </p>
           </div>
 
-          @for (line of phoneLines; track line.id) {
-            <div class="phone-card">
-              <div class="phone-icon">☎</div>
-
-              <div class="phone-info">
-                <strong>{{ line.label }}</strong>
-                <span>{{ line.number }}</span>
-                <small>
-                  {{ line.active ? 'Active' : 'Inactive' }}
-                </small>
-              </div>
-
-              <button
-                type="button"
-                class="line-button"
-                [class.danger]="line.active"
-                (click)="togglePhoneLine(line)">
-                {{ line.active ? 'Disable' : 'Enable' }}
+          @if (phonesLoading) {
+            <p>Loading phone numbers...</p>
+          } @else if (phonesError) {
+            <div class="phone-note">
+              {{ phonesError }}
+              <button type="button" (click)="loadPhones()">
+                Retry
               </button>
             </div>
-          } @empty {
-            <div class="phone-note">
-              Phone numbers will appear here when this
-              section is connected to the backend.
-            </div>
+          } @else {
+            @for (line of phoneLines; track line.id) {
+              <div class="phone-card">
+                <div class="phone-icon">☎</div>
+
+                <div class="phone-info">
+                  <strong>
+                    {{ line.isPrimary ? 'Primary Number' : 'Additional Number' }}
+                  </strong>
+
+                  <span>{{ line.number }}</span>
+
+                  <small>
+                    {{ line.active ? 'Active' : 'Inactive' }}
+                  </small>
+                </div>
+
+                <div
+                  class="phone-status"
+                  [class.inactive]="!line.active">
+                  {{ line.active ? 'Active' : 'Inactive' }}
+                </div>
+              </div>
+            } @empty {
+              <div class="phone-note">
+                No phone numbers are currently assigned
+                to your account.
+              </div>
+            }
           }
 
           <div class="phone-note">
-            Phone numbers are provisioned through Telnyx.
-            Number management and activation will be
-            connected to the backend in a future stage.
+            Phone numbers are managed by Call Guardian AI.
+            Contact your administrator to request changes
+            or additional numbers.
           </div>
         </section>
       }
+
 
     </div>
   </div>

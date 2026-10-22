@@ -366,3 +366,17 @@
     flex-wrap: wrap;
   }
 }
+.phone-status {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #e9f8ef;
+  color: #16803c;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.inactive {
+    background: #f1f3f7;
+    color: #697386;
+  }
+}
