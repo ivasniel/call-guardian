@@ -1,0 +1,58 @@
+<div class="app-shell">
+  <aside class="sidebar" [class.open]="menuOpen">
+    <div class="brand">
+      <span class="brand-icon">✦</span>
+      <div>
+        <strong>Call Guardian</strong>
+        <small>AI Receptionist</small>
+      </div>
+    </div>
+
+    <div class="nav-label">WORKSPACE</div>
+
+    <nav>
+      <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
+        <span>◫</span> Dashboard
+      </a>
+      <a routerLink="/calls" routerLinkActive="active" (click)="closeMenu()">
+        <span>☎</span> Call History
+      </a>
+      <a routerLink="/contacts" routerLinkActive="active" (click)="closeMenu()">
+        <span>♙</span> Contacts
+      </a>
+      <a routerLink="/notifications" routerLinkActive="active" (click)="closeMenu()">
+        <span>♧</span> Notifications
+      </a>
+      <a routerLink="/settings" routerLinkActive="active" (click)="closeMenu()">
+        <span>⚙</span> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <span class="status-dot"></span>
+      <span>AI Agent Online</span>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <button class="menu-toggle" type="button" (click)="toggleMenu()">☰</button>
+
+      <div class="topbar-title">Call Guardian AI</div>
+
+      <div class="topbar-actions">
+        <div class="avatar">CG</div>
+
+        <button type="button" class="logout-button" (click)="logout()">Sign out</button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+@if (menuOpen) {
+  <div class="mobile-overlay" (click)="closeMenu()"></div>
+}

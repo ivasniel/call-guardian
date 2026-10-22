@@ -1,0 +1,221 @@
+
+<section class="clients-page">
+  <header class="page-heading">
+    <div>
+      <h1>Manage Clients</h1>
+      <p>Manage customer accounts across Call Guardian AI.</p>
+    </div>
+
+    <button class="btn btn-primary" type="button"
+            (click)="openCreateForm()">
+      + Add Client
+    </button>
+  </header>
+
+  <div class="panel">
+    <div class="filters">
+      <form class="search-form" (ngSubmit)="applyFilters()">
+        <input
+          type="search"
+          name="search"
+          [(ngModel)]="search"
+          placeholder="Search by business name or slug"
+        />
+        <button type="submit" class="btn btn-secondary">
+          Search
+        </button>
+      </form>
+
+      <select
+        name="status"
+        [(ngModel)]="status"
+        (ngModelChange)="applyFilters()">
+        <option value="ALL">All statuses</option>
+        <option value="ACTIVE">Active</option>
+        <option value="SUSPENDED">Suspended</option>
+        <option value="CANCELED">Canceled</option>
+      </select>
+    </div>
+
+    @if (loading) {
+      <div class="empty-state">Loading clients...</div>
+    } @else if (error) {
+      <div class="empty-state">
+        {{ error }}
+        <button type="button" class="btn btn-secondary"
+                (click)="loadAccounts()">Retry</button>
+      </div>
+    } @else if (accounts.length === 0) {
+      <div class="empty-state">
+        No customer accounts found.
+      </div>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Business</th>
+              <th>Status</th>
+              <th>Users</th>
+              <th>Numbers</th>
+              <th>Calls</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (account of accounts; track account.id) {
+              <tr>
+                <td>
+                  <strong>{{ account.name }}</strong>
+                  <small>{{ account.slug }}</small>
+                </td>
+                <td>
+                  <span class="status"
+                        [class.active]="account.status === 'ACTIVE'"
+                        [class.suspended]="account.status === 'SUSPENDED'"
+                        [class.canceled]="account.status === 'CANCELED'">
+                    {{ account.status }}
+                  </span>
+                </td>
+                <td>{{ account.totalUsers }}</td>
+                <td>{{ account.totalNumbers }}</td>
+                <td>{{ account.totalCalls }}</td>
+                <td>{{ account.createdAt | date:'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <footer class="table-footer">
+      <span>
+        Showing {{ firstItem }}–{{ lastItem }}
+        of {{ totalItems }} clients
+      </span>
+
+      <div class="pagination">
+        <select
+          [ngModel]="pageSize"
+          (ngModelChange)="changePageSize($event.toString())">
+          <option [ngValue]="10">10 per page</option>
+          <option [ngValue]="20">20 per page</option>
+          <option [ngValue]="50">50 per page</option>
+          <option [ngValue]="100">100 per page</option>
+        </select>
+
+        <button type="button" class="btn btn-secondary"
+                [disabled]="page <= 1 || loading"
+                (click)="changePage(page - 1)">
+          Previous
+        </button>
+
+        <span>{{ page }} / {{ totalPages }}</span>
+
+        <button type="button" class="btn btn-secondary"
+                [disabled]="page >= totalPages || loading"
+                (click)="changePage(page + 1)">
+          Next
+        </button>
+      </div>
+    </footer>
+  </div>
+</section>
+
+@if (showCreateForm) {
+  <div class="modal-backdrop" (click)="closeCreateForm()">
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-client-title"
+      (click)="$event.stopPropagation()">
+
+      <header class="modal-header">
+        <div>
+          <h2 id="create-client-title">Add Client</h2>
+          <p>Create a business account and its owner.</p>
+        </div>
+
+        <button type="button" class="close-btn"
+                [disabled]="saving"
+                aria-label="Close"
+                (click)="closeCreateForm()">×</button>
+      </header>
+
+      <form (ngSubmit)="createAccount()" #clientForm="ngForm">
+        <label>
+          Business Name
+          <input
+            name="businessName"
+            [(ngModel)]="form.name"
+            maxlength="180"
+            required
+            placeholder="Miami Auto Care" />
+        </label>
+
+        <label>
+          Owner Name
+          <input
+            name="ownerName"
+            [(ngModel)]="form.ownerName"
+            maxlength="255"
+            required
+            placeholder="John Smith" />
+        </label>
+
+        <label>
+          Owner Email
+          <input
+            type="email"
+            name="ownerEmail"
+            [(ngModel)]="form.ownerEmail"
+            required
+            email
+            placeholder="john@example.com" />
+        </label>
+
+        <label>
+          Owner Phone (E.164)
+          <input
+            type="tel"
+            name="ownerPhone"
+            [(ngModel)]="form.ownerPhone"
+            required
+            pattern="^\+[1-9][0-9]{7,14}$"
+            placeholder="+13055550123" />
+        </label>
+
+        <label>
+          Temporary Password
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="form.password"
+            minlength="12"
+            required
+            autocomplete="new-password"
+            placeholder="At least 12 characters" />
+        </label>
+
+        <p class="form-note">
+          The account will be created without an assigned
+          Telnyx number. Call handling must be configured separately.
+        </p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary"
+                  [disabled]="saving"
+                  (click)="closeCreateForm()">
+            Cancel
+          </button>
+
+          <button type="submit" class="btn btn-primary"
+                  [disabled]="clientForm.invalid || saving">
+            {{ saving ? 'Creating...' : 'Create Client' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

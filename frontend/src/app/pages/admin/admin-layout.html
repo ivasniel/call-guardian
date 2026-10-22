@@ -1,0 +1,73 @@
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="brand">
+      <div class="brand-icon">CG</div>
+      <div>
+        <strong>Call Guardian AI</strong>
+        <span>Administration</span>
+      </div>
+    </div>
+
+    <div class="menu-label">MANAGEMENT</div>
+
+    <nav>
+      <a
+        routerLink="/admin/dashboard"
+        routerLinkActive="active"
+      >
+        <span>▦</span> Dashboard
+      </a>
+
+      <a
+        routerLink="/admin/clients"
+        routerLinkActive="active"
+      >
+        <span>♙</span> Manage Clients
+      </a>
+
+      <a
+        routerLink="/admin/plans"
+        routerLinkActive="active"
+      >
+        <span>▤</span> Plans & Pricing
+      </a>
+
+      <a
+        routerLink="/admin/billing"
+        routerLinkActive="active"
+      >
+        <span>▣</span> Billing
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="admin-user">
+        <div class="avatar">SA</div>
+        <div>
+          <strong>Super Admin</strong>
+          <small>Platform Owner</small>
+        </div>
+      </div>
+
+      <button type="button" (click)="logout()">
+        Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div>
+        <span class="eyebrow">CALL GUARDIAN AI</span>
+        <strong>Administration Portal</strong>
+      </div>
+
+      <div class="admin-badge">Super Admin</div>
+    </header>
+
+    <div class="admin-content">
+      <router-outlet />
+    </div>
+  </main>
+</div>

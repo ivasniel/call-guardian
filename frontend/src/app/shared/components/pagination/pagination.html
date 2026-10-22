@@ -1,0 +1,52 @@
+
+<div class="pagination">
+  <div class="pagination-info">
+    Showing <strong>{{ startItem }}–{{ endItem }}</strong>
+    of <strong>{{ totalItems }}</strong> results
+  </div>
+
+  <div class="pagination-controls">
+    <button
+      type="button"
+      class="nav-button"
+      [disabled]="currentPage <= 1"
+      (click)="goToPage(currentPage - 1)">
+      ‹ Previous
+    </button>
+
+    @for (page of visiblePages; track $index) {
+      @if (isNumber(page)) {
+        <button
+          type="button"
+          class="page-button"
+          [class.active]="currentPage === page"
+          [attr.aria-current]="currentPage === page ? 'page' : null"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+      } @else {
+        <span class="ellipsis">…</span>
+      }
+    }
+
+    <button
+      type="button"
+      class="nav-button"
+      [disabled]="currentPage >= totalPages"
+      (click)="goToPage(currentPage + 1)">
+      Next ›
+    </button>
+  </div>
+
+  <div class="page-size">
+    <label for="pagination-page-size">Rows</label>
+    <select
+      id="pagination-page-size"
+      [value]="pageSize"
+      (change)="changePageSize($event)">
+      @for (size of pageSizeOptions; track size) {
+        <option [value]="size">{{ size }}</option>
+      }
+    </select>
+  </div>
+</div>

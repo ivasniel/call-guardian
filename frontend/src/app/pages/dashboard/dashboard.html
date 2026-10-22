@@ -1,0 +1,183 @@
+
+<section class="dashboard">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">OVERVIEW</span>
+      <h1>Dashboard</h1>
+      <p>Monitor your AI receptionist and incoming calls.</p>
+    </div>
+
+    <div class="period-filter">
+      <label for="dashboard-period">Period</label>
+      <select
+        id="dashboard-period"
+        [(ngModel)]="period"
+        (ngModelChange)="onPeriodChange()">
+        <option value="today">Today</option>
+        <option value="7d">Last 7 Days</option>
+        <option value="30d">Last 30 Days</option>
+        <option value="all">All Time</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="dashboard-message">
+      Loading statistics...
+    </div>
+  }
+
+  @if (error) {
+    <div class="dashboard-message error-message" role="alert">
+      {{ error }}
+      <button type="button" (click)="loadDashboard()">Retry</button>
+    </div>
+  }
+
+  <div class="stats-grid">
+    @for (stat of statCards; track stat.label) {
+      <div class="stat-card">
+        <div class="stat-top">
+          <span>{{ stat.label }}</span>
+          <div class="stat-icon">{{ stat.icon }}</div>
+        </div>
+        <strong>{{ stat.value }}</strong>
+        <small>{{ stat.change }}</small>
+      </div>
+    }
+  </div>
+
+  <div class="analytics-grid">
+    <section class="panel category-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Call Categories</h2>
+          <p>Distribution of incoming calls</p>
+        </div>
+      </div>
+
+      @if (!categories.length && !loading) {
+        <p class="empty-message">
+          No calls recorded for this period.
+        </p>
+      }
+
+      <div class="category-list">
+        @for (category of categories; track category.name) {
+          <div class="category-item">
+            <div class="category-info">
+              <strong>{{ category.name }}</strong>
+              <span>
+                {{ category.count }} calls ·
+                {{ category.percentage }}%
+              </span>
+            </div>
+
+            <div class="progress-track">
+              <div
+                class="progress-fill"
+                [style.width.%]="
+                  category.count / maxCategoryCount * 100
+                ">
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="panel assistant-panel">
+      <div class="assistant-icon">✦</div>
+      <h2>Your AI Receptionist</h2>
+
+      <p>
+        Call Guardian AI answers calls, identifies the reason,
+        classifies priorities and prepares callback information.
+      </p>
+
+      <div class="feature-row">
+        <span>✓</span> Bilingual call screening
+      </div>
+
+      <div class="feature-row">
+        <span>✓</span> Intelligent classification
+      </div>
+
+      <div class="feature-row">
+        <span>✓</span> Callback information
+      </div>
+
+      <a routerLink="/settings" class="settings-link">
+        Agent Settings <span>→</span>
+      </a>
+    </section>
+  </div>
+
+  <section class="panel recent-panel">
+    <div class="panel-heading recent-heading">
+      <div>
+        <h2>Recent Calls</h2>
+        <p>Latest calls for the selected period</p>
+      </div>
+
+      <a routerLink="/calls" class="view-all">
+        View all calls →
+      </a>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Caller</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Date</th>
+            <th>Summary</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (call of recentCalls; track call.id) {
+            <tr>
+              <td>
+                <strong>{{ callerLabel(call) }}</strong>
+                <small>{{ call.phone || 'Unknown number' }}</small>
+              </td>
+
+              <td>
+                <span class="category-badge">
+                  {{ call.category || 'UNKNOWN' }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="priority-badge"
+                  [class.high]="call.priority === 'HIGH'"
+                  [class.normal]="call.priority === 'NORMAL'"
+                  [class.low]="call.priority === 'LOW'">
+                  {{ call.priority || '—' }}
+                </span>
+              </td>
+
+              <td>
+                {{ call.startedAt | date:'MMM d, h:mm a' }}
+              </td>
+
+              <td class="summary-cell">
+                {{ call.summary || 'No summary available.' }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-message">
+                No recent calls for this period.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

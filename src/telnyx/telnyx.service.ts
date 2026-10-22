@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID, createHmac } from 'node:crypto';
+import type { AccountSettings } from '../account/account-settings.service';
 
 export class TelnyxCallEndedError extends Error {
   constructor() { super('Call already ended'); }
@@ -30,7 +31,8 @@ export class TelnyxService {
     return this.command(id,'gather_using_speak',{payload:text,voice:'female',language:'en-US',minimum_digits:1,maximum_digits:1,valid_digits:'12',timeout_millis:12000});
   }
 
-startRelay(id: string) {
+
+startRelay(id: string, settings: AccountSettings) {
   const host = process.env.PUBLIC_BASE_URL;
   const secret = process.env.RELAY_SHARED_SECRET;
 
@@ -46,7 +48,7 @@ startRelay(id: string) {
   relayUrl.protocol = 'wss:';
 
   const expires = String(
-    Math.floor(Date.now() / 1000) + 300
+    Math.floor(Date.now() / 1000) + 300,
   );
 
   const signature = createHmac('sha256', secret)
@@ -57,27 +59,29 @@ startRelay(id: string) {
   relayUrl.searchParams.set('expires', expires);
   relayUrl.searchParams.set('signature', signature);
 
-return this.command(id, 'conversation_relay_start', {
-  url: relayUrl.toString(),
+  // El idioma automático conserva el comportamiento
+  // inicial que ya funciona en el piloto.
+  const language =
+    settings.language === 'en' ? 'en' : 'es';
 
-//   greeting: 'Hello?',
-//   language: 'en-US',
+  const greeting =
+    language === 'en'
+      ? settings.greetingEn
+      : settings.greetingEs;
 
-//   voice: process.env.RELAY_VOICE ||
-//     'Telnyx.Qwen3TTS.d9348e0d-988a-42cc-a64e-18093fe45c03',
-//   tts_provider: 'telnyx',
-greeting: 'Hola.',
-language: 'es',
-
-voice: 'Soniox.tts-rt-v2.Emma',
-
-  transcription_engine: 'Soniox',
-  transcription_engine_config: {
-    transcription_model: 'soniox/stt-rt-v4',
-    language: 'auto',
-  },
-});
+  return this.command(id, 'conversation_relay_start', {
+    url: relayUrl.toString(),
+    greeting,
+    language,
+    voice: 'Soniox.tts-rt-v2.Emma',
+    transcription_engine: 'Soniox',
+    transcription_engine_config: {
+      transcription_model: 'soniox/stt-rt-v4',
+      language: 'auto',
+    },
+  });
 }
+
 
   startRecording(id:string) {
     return this.command(id,'record_start',{

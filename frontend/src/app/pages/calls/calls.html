@@ -1,0 +1,249 @@
+<section class="calls-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">CALL MANAGEMENT</span>
+      <h1>Call History</h1>
+      <p>Review your incoming calls and AI-generated summaries.</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="filters">
+      <div class="search-field">
+        <label for="call-search">Search calls</label>
+        <input
+          id="call-search"
+          type="search"
+          placeholder="Caller, phone or summary..."
+          [(ngModel)]="search"
+          (ngModelChange)="onFiltersChange()"
+        />
+      </div>
+
+      <div class="filter-field">
+        <label for="category-filter">Category</label>
+        <select
+          id="category-filter"
+          [(ngModel)]="categoryFilter"
+          (ngModelChange)="onFiltersChange()"
+        >
+          @for (category of categories; track category) {
+            <option [value]="category">{{ category }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="priority-filter">Priority</label>
+        <select
+          id="priority-filter"
+          [(ngModel)]="priorityFilter"
+          (ngModelChange)="onFiltersChange()"
+        >
+          <option value="ALL">All priorities</option>
+          <option value="HIGH">High</option>
+          <option value="NORMAL">Normal</option>
+          <option value="LOW">Low</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label for="decision-filter">Decision</label>
+        <select
+          id="decision-filter"
+          [(ngModel)]="decisionFilter"
+          (ngModelChange)="onFiltersChange()"
+        >
+          <option value="ALL">All decisions</option>
+          <option value="URGENT">Urgent</option>
+          <option value="NORMAL">Normal</option>
+          <option value="SPAM">Spam</option>
+        </select>
+      </div>
+
+      <button type="button" class="clear-button" (click)="clearFilters()">Clear</button>
+    </div>
+
+    <div class="table-heading">
+      <div>
+        <h2>All Calls</h2>
+        <p>{{ totalItems }} matching calls</p>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="loading-state">Loading calls...</div>
+    }
+
+    @if (error) {
+      <div class="error-state" role="alert">
+        {{ error }}
+        <button type="button" (click)="loadCalls()">Retry</button>
+      </div>
+    }
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Caller</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Decision</th>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (call of paginatedCalls; track call.id) {
+            <tr>
+              <td>
+                <strong>{{ callerLabel(call) }}</strong>
+                <small>{{ call.phone || 'Unknown number' }}</small>
+              </td>
+              <td>
+                <span class="category-badge">{{ call.category || 'UNKNOWN' }}</span>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  [class.high]="call.priority === 'HIGH'"
+                  [class.normal]="call.priority === 'NORMAL'"
+                  [class.low]="call.priority === 'LOW'"
+                >
+                  {{ call.priority }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  [class.high]="call.decision === 'URGENT'"
+                  [class.normal]="call.decision === 'NORMAL'"
+                  [class.low]="call.decision === 'SPAM'"
+                >
+                  {{ call.decision }}
+                </span>
+              </td>
+              <td>{{ call.startedAt | date: 'MMM d, y, h:mm a' }}</td>
+              <td>{{ formatDuration(call.durationSeconds) }}</td>
+              <td>
+                <button type="button" class="details-button" (click)="showDetails(call)">
+                  View Details
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            @if (!loading && !error) {
+              <tr>
+                <td colspan="7" class="empty-state">No calls match the selected filters.</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    >
+    </app-pagination>
+  </section>
+</section>
+
+@if (detailsLoading) {
+  <div class="modal-overlay">
+    <div class="detail-feedback">Loading call details...</div>
+  </div>
+}
+
+@if (detailsError) {
+  <div class="modal-overlay">
+    <div class="detail-feedback">
+      <p>{{ detailsError }}</p>
+      <button type="button" (click)="closeDetails()">Close</button>
+    </div>
+  </div>
+}
+
+@if (selectedCall; as call) {
+  <div class="modal-overlay" (click)="closeDetails()">
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="call-details-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="eyebrow">CALL DETAILS</span>
+          <h2 id="call-details-title">{{ callerLabel(call) }}</h2>
+          <p>{{ call.phone }}</p>
+        </div>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close details"
+          (click)="closeDetails()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="detail-grid">
+        <div>
+          <small>Category</small>
+          <strong>{{ call.category }}</strong>
+        </div>
+        <div>
+          <small>Priority</small>
+          <strong>{{ call.priority || '-' }}</strong>
+        </div>
+        <div>
+          <small>Decision</small>
+          <strong>{{ call.decision || '-' }}</strong>
+        </div>
+        <div>
+          <small>Duration</small>
+          <strong>{{ formatDuration(call.durationSeconds) }}</strong>
+        </div>
+        <div>
+          <small>Date</small>
+          <strong>{{ call.startedAt | date: 'medium' }}</strong>
+        </div>
+        <div>
+          <small>Callback phone</small>
+          <strong>{{ call.callbackPhone || 'Not provided' }}</strong>
+          @if (call.callbackPhone) {
+            <span class="confirmation">
+              {{ call.callbackConfirmed ? 'Confirmed' : 'Not confirmed' }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3>AI Summary</h3>
+        <p>{{ call.summary || 'No summary available.' }}</p>
+      </div>
+
+      <div class="detail-section">
+        <h3>Conversation Transcript</h3>
+
+        <div class="transcript">
+          {{ call.transcript || 'No transcript available.' }}
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="details-button" (click)="closeDetails()">Close</button>
+      </div>
+    </section>
+  </div>
+}

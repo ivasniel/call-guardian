@@ -1,0 +1,218 @@
+
+<section class="contacts-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">CONTACT MANAGEMENT</span>
+      <h1>Contacts</h1>
+      <p>Manage known callers and keep contact information organized.</p>
+    </div>
+
+    <button type="button" class="primary-button" (click)="openCreate()">
+      + Add Contact
+    </button>
+  </div>
+
+  <div class="demo-notice">
+    Demo mode — changes on this page are not saved to MySQL yet.
+  </div>
+
+  @if (success) {
+    <div class="success-message">{{ success }}</div>
+  }
+
+  <section class="panel">
+    <div class="filters">
+      <div class="field search-field">
+        <label for="contact-search">Search contacts</label>
+        <input
+          id="contact-search"
+          type="search"
+          [(ngModel)]="search"
+          (ngModelChange)="onFiltersChange()"
+          placeholder="Name, phone or organization..."
+        />
+      </div>
+
+      <div class="field">
+        <label for="contact-category">Category</label>
+        <select
+          id="contact-category"
+          [(ngModel)]="categoryFilter"
+          (ngModelChange)="onFiltersChange()">
+          <option value="ALL">All categories</option>
+          @for (category of categories; track category) {
+            <option [value]="category">{{ category }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="table-heading">
+      <h2>All Contacts</h2>
+      <span>{{ totalItems }} contacts</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Category</th>
+            <th>Organization</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (contact of paginatedContacts; track contact.id) {
+            <tr>
+              <td><strong>{{ contact.name }}</strong></td>
+              <td>{{ contact.phone }}</td>
+              <td>
+                <span class="category-badge">
+                  {{ contact.category }}
+                </span>
+              </td>
+              <td>{{ contact.organization || '—' }}</td>
+              <td>
+                <div class="table-actions">
+                  <button
+                    type="button"
+                    class="action-button"
+                    (click)="openEdit(contact)">
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    class="action-button danger"
+                    (click)="deleteContact(contact)">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-state">
+                No contacts match your search.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalItems]="totalItems"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+  </section>
+</section>
+
+@if (showForm) {
+  <div class="modal-overlay" (click)="closeForm()">
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="contact-modal-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-heading">
+        <div>
+          <h2 id="contact-modal-title">
+            {{ editingId === null ? 'Add Contact' : 'Edit Contact' }}
+          </h2>
+          <p>Keep caller information up to date.</p>
+        </div>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close"
+          (click)="closeForm()">×</button>
+      </div>
+
+      @if (error) {
+        <div class="error-message" role="alert">{{ error }}</div>
+      }
+
+      <form (ngSubmit)="saveContact()">
+        <div class="form-grid">
+          <div class="field">
+            <label for="contact-name">Full Name *</label>
+            <input
+              id="contact-name"
+              name="name"
+              [(ngModel)]="form.name"
+              required
+              maxlength="120"
+              placeholder="Contact name"
+            />
+          </div>
+
+          <div class="field">
+            <label for="contact-phone">Phone Number *</label>
+            <input
+              id="contact-phone"
+              name="phone"
+              type="tel"
+              [(ngModel)]="form.phone"
+              required
+              placeholder="+13055551234"
+            />
+          </div>
+
+          <div class="field">
+            <label for="contact-type">Category</label>
+            <select
+              id="contact-type"
+              name="category"
+              [(ngModel)]="form.category">
+              @for (category of categories; track category) {
+                <option [value]="category">{{ category }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="contact-org">Organization</label>
+            <input
+              id="contact-org"
+              name="organization"
+              [(ngModel)]="form.organization"
+              maxlength="200"
+              placeholder="Optional"
+            />
+          </div>
+
+          <div class="field full-width">
+            <label for="contact-notes">Notes</label>
+            <textarea
+              id="contact-notes"
+              name="notes"
+              [(ngModel)]="form.notes"
+              rows="4"
+              placeholder="Optional notes about this contact">
+            </textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="closeForm()">Cancel</button>
+
+          <button type="submit" class="primary-button">
+            {{ editingId === null ? 'Add Contact' : 'Save Changes' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

@@ -1,0 +1,337 @@
+
+<section class="settings-page">
+  <div class="page-heading">
+    <span class="eyebrow">ACCOUNT CONFIGURATION</span>
+    <h1>Settings</h1>
+    <p>Manage your profile, AI receptionist and connected phone lines.</p>
+  </div>
+
+  <div class="preview-note">
+    AI Agent Settings are saved to your account, but are not yet
+    applied to live calls. Profile editing and phone management
+    are still under development.
+  </div>
+
+  <div class="settings-layout">
+    <nav class="settings-nav" aria-label="Settings sections">
+      <button
+        type="button"
+        [class.active]="activeTab === 'profile'"
+        (click)="changeTab('profile')">
+        <span>♙</span>
+        My Profile
+      </button>
+
+      <button
+        type="button"
+        [class.active]="activeTab === 'agent'"
+        (click)="changeTab('agent')">
+        <span>✦</span>
+        AI Agent Settings
+      </button>
+
+      <button
+        type="button"
+        [class.active]="activeTab === 'phone'"
+        (click)="changeTab('phone')">
+        <span>☎</span>
+        Phone Settings
+      </button>
+    </nav>
+
+    <div class="settings-content">
+
+      <!-- MY PROFILE -->
+      @if (activeTab === 'profile') {
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>My Profile</h2>
+            <p>Your account and contact information.</p>
+          </div>
+
+          @if (profileLoading) {
+            <p>Loading profile...</p>
+          }
+
+          <form (ngSubmit)="saveProfile()" class="form-grid">
+            <div class="field">
+              <label for="profile-name">Full Name</label>
+              <input
+                id="profile-name"
+                name="profileName"
+                [(ngModel)]="profile.name"
+                maxlength="120"
+                readonly
+              />
+            </div>
+
+            <div class="field">
+              <label for="profile-email">Email Address</label>
+              <input
+                id="profile-email"
+                name="profileEmail"
+                type="email"
+                [value]="profile.email"
+                readonly
+              />
+              <small>
+                This email is permanently linked to your account.
+                It cannot be changed in Settings.
+              </small>
+            </div>
+
+            <div class="field full-width">
+              <label for="profile-phone">Personal Phone Number</label>
+              <input
+                id="profile-phone"
+                name="profilePhone"
+                type="tel"
+                [(ngModel)]="profile.phone"
+                readonly
+                placeholder="Not available"
+              />
+              <small>
+                Profile editing will be available in a future update.
+              </small>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="primary-button"
+                disabled>
+                Save Profile (Coming Soon)
+              </button>
+            </div>
+          </form>
+        </section>
+      }
+
+      <!-- AI AGENT SETTINGS -->
+      @if (activeTab === 'agent') {
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>AI Agent Settings</h2>
+            <p>
+              Customize how your virtual receptionist handles
+              incoming calls.
+            </p>
+          </div>
+
+          @if (agentLoading) {
+            <p>Loading AI Agent Settings...</p>
+          } @else if (agentError) {
+            <div class="preview-note">
+              {{ agentError }}
+              <button type="button" (click)="loadAgent()">
+                Retry
+              </button>
+            </div>
+          } @else if (agentLoaded) {
+
+            <form
+              (ngSubmit)="saveAgent()"
+              #agentForm="ngForm">
+
+              <div class="setting-row">
+                <div>
+                  <strong>AI Receptionist</strong>
+                  <p>Enable or disable automatic call answering.</p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="agentEnabled"
+                    [(ngModel)]="agent.enabled"
+                    [disabled]="agentSaving"
+                    aria-label="AI Receptionist enabled"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="field section-field">
+                <label for="agent-language">
+                  Preferred Language
+                </label>
+
+                <select
+                  id="agent-language"
+                  name="language"
+                  [(ngModel)]="agent.language"
+                  [disabled]="agentSaving">
+                  <option value="auto">
+                    Automatic detection (English / Spanish)
+                  </option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                </select>
+
+                <small>
+                  Automatic detection is recommended for bilingual callers.
+                </small>
+              </div>
+
+              <div class="field section-field">
+                <label for="greeting-en">
+                  English Welcome Message
+                </label>
+
+                <textarea
+                  id="greeting-en"
+                  name="greetingEn"
+                  [(ngModel)]="agent.greetingEn"
+                  [disabled]="agentSaving"
+                  rows="3"
+                  maxlength="500"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="field section-field">
+                <label for="greeting-es">
+                  Spanish Welcome Message
+                </label>
+
+                <textarea
+                  id="greeting-es"
+                  name="greetingEs"
+                  [(ngModel)]="agent.greetingEs"
+                  [disabled]="agentSaving"
+                  rows="3"
+                  maxlength="500"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="field section-field">
+                <label for="max-followups">
+                  Maximum Follow-up Questions
+                </label>
+
+                <input
+                  id="max-followups"
+                  name="maxFollowUps"
+                  type="number"
+                  min="1"
+                  max="15"
+                  required
+                  [(ngModel)]="agent.maxFollowUps"
+                  [disabled]="agentSaving"
+                />
+
+                <small>
+                  Maximum number of follow-up questions
+                  before the agent closes a conversation.
+                </small>
+              </div>
+
+              <div class="setting-row border-top">
+                <div>
+                  <strong>Early Spam Screening</strong>
+                  <p>
+                    End clearly unwanted sales calls before
+                    asking more questions.
+                  </p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="spamScreening"
+                    [(ngModel)]="agent.spamScreening"
+                    [disabled]="agentSaving"
+                    aria-label="Early spam screening"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="setting-row border-top">
+                <div>
+                  <strong>Callback Phone Verification</strong>
+                  <p>
+                    Ask callers to confirm their preferred
+                    callback number.
+                  </p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="askCallbackPhone"
+                    [(ngModel)]="agent.askCallbackPhone"
+                    [disabled]="agentSaving"
+                    aria-label="Callback phone verification"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  class="primary-button"
+                  [disabled]="agentSaving || agentForm.invalid">
+                  {{
+                    agentSaving
+                      ? 'Saving...'
+                      : 'Save Agent Settings'
+                  }}
+                </button>
+              </div>
+            </form>
+          }
+        </section>
+      }
+
+      <!-- PHONE SETTINGS -->
+      @if (activeTab === 'phone') {
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Phone Settings</h2>
+            <p>
+              Manage phone numbers associated with
+              your AI receptionist.
+            </p>
+          </div>
+
+          @for (line of phoneLines; track line.id) {
+            <div class="phone-card">
+              <div class="phone-icon">☎</div>
+
+              <div class="phone-info">
+                <strong>{{ line.label }}</strong>
+                <span>{{ line.number }}</span>
+                <small>
+                  {{ line.active ? 'Active' : 'Inactive' }}
+                </small>
+              </div>
+
+              <button
+                type="button"
+                class="line-button"
+                [class.danger]="line.active"
+                (click)="togglePhoneLine(line)">
+                {{ line.active ? 'Disable' : 'Enable' }}
+              </button>
+            </div>
+          } @empty {
+            <div class="phone-note">
+              Phone numbers will appear here when this
+              section is connected to the backend.
+            </div>
+          }
+
+          <div class="phone-note">
+            Phone numbers are provisioned through Telnyx.
+            Number management and activation will be
+            connected to the backend in a future stage.
+          </div>
+        </section>
+      }
+
+    </div>
+  </div>
+</section>

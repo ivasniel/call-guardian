@@ -1,0 +1,231 @@
+
+:host {
+  position: relative;
+  z-index: 3000;
+}
+
+.toast-container {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  width: min(390px, calc(100vw - 32px));
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 17px;
+  background: #fff;
+  border: 1px solid #e5eaf2;
+  border-left: 4px solid #4169e1;
+  border-radius: 13px;
+  box-shadow: 0 12px 35px rgba(16, 32, 60, .14);
+  animation: slide-in .25s ease;
+  pointer-events: auto;
+
+  &.success {
+    border-left-color: #23b77a;
+
+    .toast-icon {
+      background: #e5f8ef;
+      color: #15945c;
+    }
+  }
+
+  &.error {
+    border-left-color: #e25555;
+
+    .toast-icon {
+      background: #ffeded;
+      color: #d53e3e;
+    }
+  }
+
+  &.warning {
+    border-left-color: #f0a52a;
+
+    .toast-icon {
+      background: #fff4de;
+      color: #b87911;
+    }
+  }
+
+  &.info {
+    border-left-color: #4169e1;
+
+    .toast-icon {
+      background: #edf3ff;
+      color: #4169e1;
+    }
+  }
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #1e304e;
+    font-size: 13px;
+  }
+
+  p {
+    margin: 0;
+    color: #74839c;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+}
+
+.toast-close {
+  background: transparent;
+  border: 0;
+  padding: 0 3px;
+  color: #98a4b6;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 3100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 25, 46, .6);
+  backdrop-filter: blur(4px);
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 430px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 25px 75px rgba(0, 0, 0, .2);
+  animation: dialog-in .2s ease;
+
+  h2 {
+    margin: 18px 0 10px;
+    color: #192b49;
+    font-size: 21px;
+  }
+
+  p {
+    margin: 0;
+    color: #74839c;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+}
+
+.dialog-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #edf3ff;
+  color: #4169e1;
+  font-size: 26px;
+  font-weight: 700;
+
+  &.danger {
+    background: #fff0f0;
+    color: #d53e3e;
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.cancel-button,
+.confirm-button {
+  padding: 12px 18px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel-button {
+  background: #fff;
+  color: #53647f;
+  border: 1px solid #dfe6f1;
+}
+
+.confirm-button {
+  background: #4169e1;
+  color: white;
+  border: 1px solid #4169e1;
+
+  &.danger {
+    background: #d94141;
+    border-color: #d94141;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .toast-container {
+    top: 12px;
+    right: 16px;
+  }
+
+  .confirm-dialog {
+    padding: 23px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .confirm-dialog {
+    animation: none;
+  }
+}

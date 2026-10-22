@@ -1,0 +1,282 @@
+
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f6f8fc;
+}
+
+// ===================================
+// SIDEBAR
+// ===================================
+
+.sidebar {
+  width: 250px;
+  background: #101c33;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 16px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+  padding: 0 10px;
+
+  strong {
+    display: block;
+    font-size: 17px;
+  }
+
+  small {
+    color: #a5b5d1;
+    font-size: 12px;
+  }
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #4169e1;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  color: #7085a9;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 13px 14px;
+    border-radius: 10px;
+    color: #aebed8;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: #1b2b49;
+      color: #fff;
+    }
+
+    &.active {
+      background: #2d4c85;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    span {
+      font-size: 20px;
+      width: 22px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 12px;
+  font-size: 12px;
+  color: #b1c3e0;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38d39f;
+  flex-shrink: 0;
+}
+
+// ===================================
+// MAIN AREA
+// ===================================
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+}
+
+// ===================================
+// TOPBAR
+// ===================================
+
+.topbar {
+  height: 75px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 32px;
+  background: #fff;
+  border-bottom: 1px solid #e7ebf2;
+}
+
+.topbar-title {
+  color: #23324a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+// Agrupa avatar y botón a la derecha.
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e4edff;
+  color: #3359ab;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.logout-button {
+  padding: 9px 14px;
+  border: 1px solid #dbe5f5;
+  border-radius: 9px;
+  background: #f1f5ff;
+  color: #4169e1;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #e4ecff;
+  }
+}
+
+// ===================================
+// CONTENT
+// ===================================
+
+.page-content {
+  padding: 32px;
+}
+
+.menu-toggle {
+  display: none;
+}
+
+.mobile-overlay {
+  display: none;
+}
+
+// ===================================
+// TABLET / MOBILE
+// ===================================
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    z-index: 100;
+    inset: 0 auto 0 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+
+  .menu-toggle {
+    display: block;
+    border: 0;
+    background: transparent;
+    color: #23324a;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #0008;
+    z-index: 90;
+  }
+
+  .topbar {
+    padding: 0 20px;
+  }
+
+  .page-content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .topbar-title {
+    font-size: 13px;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .logout-button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .page-content {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 370px) {
+  .topbar-title {
+    font-size: 12px;
+  }
+
+  .avatar {
+    display: none;
+  }
+}

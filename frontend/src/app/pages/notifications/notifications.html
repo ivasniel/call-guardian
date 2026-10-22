@@ -1,0 +1,245 @@
+
+<section class="notifications-page">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">PREFERENCES</span>
+      <h1>Notifications</h1>
+      <p>Choose how and when Call Guardian AI notifies you.</p>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="status-message">Loading preferences...</div>
+  }
+
+  @if (error) {
+    <div class="status-message error" role="alert">
+      {{ error }}
+      @if (!preferences) {
+        <button type="button" (click)="loadPreferences()">Retry</button>
+      }
+    </div>
+  }
+
+  @if (success) {
+    <div class="status-message success" role="status">
+      {{ success }}
+    </div>
+  }
+
+  @if (preferences; as prefs) {
+    <div class="settings-grid">
+      <div class="main-column">
+
+        <section class="panel">
+          <div class="setting-row">
+            <div>
+              <h2>Enable Notifications</h2>
+              <p>Turn all outgoing notifications on or off.</p>
+            </div>
+
+            <label class="switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="prefs.enabled"
+                aria-label="Enable notifications"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel"
+          [class.disabled-panel]="!prefs.enabled">
+
+          <div class="section-heading">
+            <h2>Delivery Channels</h2>
+            <p>Select where you want to receive notifications.</p>
+          </div>
+
+          <div class="channel-grid">
+            <div class="channel-card">
+              <div class="setting-row">
+                <div>
+                  <h3>WhatsApp</h3>
+                  <p>Receive call summaries on WhatsApp.</p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="prefs.whatsappEnabled"
+                    [disabled]="!prefs.enabled"
+                    aria-label="WhatsApp notifications"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <label class="field-label" for="whatsapp-number">
+                WhatsApp Number
+              </label>
+              <input
+                id="whatsapp-number"
+                class="text-input"
+                type="tel"
+                [(ngModel)]="prefs.whatsappNumber"
+                placeholder="+13055551234"
+                [disabled]="!prefs.enabled || !prefs.whatsappEnabled"
+              />
+              <small>Include country code, for example +1.</small>
+            </div>
+
+            <div class="channel-card">
+              <div class="setting-row">
+                <div>
+                  <h3>Email</h3>
+                  <p>Receive summaries in your inbox.</p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="prefs.emailEnabled"
+                    [disabled]="!prefs.enabled"
+                    aria-label="Email notifications"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <label class="field-label" for="notification-email">
+                Email Address
+              </label>
+              <input
+                id="notification-email"
+                class="text-input"
+                type="email"
+                [(ngModel)]="prefs.emailAddress"
+                placeholder="you@example.com"
+                [disabled]="!prefs.enabled || !prefs.emailEnabled"
+              />
+              <small>You can use a different email from your login.</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel"
+          [class.disabled-panel]="!prefs.enabled">
+
+          <div class="section-heading">
+            <h2>Call Categories</h2>
+            <p>
+              Only selected categories will generate outgoing
+              notifications.
+            </p>
+          </div>
+
+          <div class="category-actions">
+            <button type="button"
+              (click)="selectImportantCategories()"
+              [disabled]="!prefs.enabled">
+              Select recommended
+            </button>
+
+            <button type="button"
+              (click)="disableAllCategories()"
+              [disabled]="!prefs.enabled">
+              Clear all
+            </button>
+          </div>
+
+          <div class="category-grid">
+            @for (category of categories; track category.key) {
+              <div class="category-row">
+                <div>
+                  <strong>{{ category.title }}</strong>
+                  <p>{{ category.description }}</p>
+                </div>
+
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    [ngModel]="prefs.categories[category.key]"
+                    (ngModelChange)="setCategory(category.key, $event)"
+                    [disabled]="!prefs.enabled"
+                    [attr.aria-label]="category.title"
+                  />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel"
+          [class.disabled-panel]="!prefs.enabled">
+
+          <div class="section-heading">
+            <h2>Priority Filter</h2>
+            <p>Choose the minimum priority for notifications.</p>
+          </div>
+
+          <div class="priority-options">
+            <label>
+              <input type="radio"
+                name="priority"
+                value="ALL"
+                [(ngModel)]="prefs.priorityFilter"
+                [disabled]="!prefs.enabled"
+              />
+              All selected categories
+            </label>
+
+            <label>
+              <input type="radio"
+                name="priority"
+                value="HIGH"
+                [(ngModel)]="prefs.priorityFilter"
+                [disabled]="!prefs.enabled"
+              />
+              High priority calls only
+            </label>
+          </div>
+        </section>
+
+        <div class="save-actions">
+          <button
+            type="button"
+            class="save-button"
+            [disabled]="saving"
+            (click)="savePreferences()">
+            {{ saving ? 'Saving...' : 'Save Preferences' }}
+          </button>
+        </div>
+      </div>
+
+      <aside class="info-column">
+        <section class="info-card">
+          <div class="info-icon">✦</div>
+          <h3>You're in control</h3>
+          <p>
+            Your AI receptionist will continue answering calls
+            even when outgoing notifications are disabled.
+          </p>
+
+          <div class="info-divider"></div>
+
+          <strong>Call History</strong>
+          <p>
+            All calls remain available in your dashboard,
+            including sales and spam.
+          </p>
+
+          <div class="info-divider"></div>
+
+          <strong>Delivery Status</strong>
+          <p>
+            WhatsApp and email delivery are not activated yet.
+            This screen currently saves your preferences only.
+          </p>
+        </section>
+      </aside>
+    </div>
+  }
+</section>

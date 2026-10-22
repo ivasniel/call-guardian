@@ -1,0 +1,69 @@
+
+<div class="toast-container" aria-live="polite">
+  @for (notice of notify.notices(); track notice.id) {
+    <div class="toast" [class]="notice.type" role="status">
+      <div class="toast-icon">
+        @switch (notice.type) {
+          @case ('success') { ✓ }
+          @case ('error') { ! }
+          @case ('warning') { ! }
+          @default { i }
+        }
+      </div>
+
+      <div class="toast-content">
+        <strong>{{ notice.title }}</strong>
+        @if (notice.message) {
+          <p>{{ notice.message }}</p>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="toast-close"
+        aria-label="Dismiss notification"
+        (click)="notify.dismiss(notice.id)">
+        ×
+      </button>
+    </div>
+  }
+</div>
+
+@if (notify.confirmation(); as dialog) {
+  <div class="dialog-backdrop"
+       (click)="notify.resolveConfirmation(false)">
+
+    <section
+      class="confirm-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      aria-describedby="confirm-message"
+      (click)="$event.stopPropagation()">
+
+      <div class="dialog-icon" [class.danger]="dialog.danger">
+        {{ dialog.danger ? '!' : '?' }}
+      </div>
+
+      <h2 id="confirm-title">{{ dialog.title }}</h2>
+      <p id="confirm-message">{{ dialog.message }}</p>
+
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="cancel-button"
+          (click)="notify.resolveConfirmation(false)">
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="confirm-button"
+          [class.danger]="dialog.danger"
+          (click)="notify.resolveConfirmation(true)">
+          {{ dialog.confirmText }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
