@@ -1,4 +1,3 @@
-
 <section class="settings-page">
   <div class="page-heading">
     <span class="eyebrow">ACCOUNT CONFIGURATION</span>
@@ -7,40 +6,29 @@
   </div>
 
   <div class="preview-note">
-    AI Agent Settings are saved to your account, but are not yet
-    applied to live calls. Profile editing and phone management
-    are still under development.
+    AI Agent Settings are saved to your account, but are not yet applied to live calls. Profile
+    editing and phone management are still under development.
   </div>
 
   <div class="settings-layout">
     <nav class="settings-nav" aria-label="Settings sections">
-      <button
-        type="button"
-        [class.active]="activeTab === 'profile'"
-        (click)="changeTab('profile')">
+      <button type="button" [class.active]="activeTab === 'profile'" (click)="changeTab('profile')">
         <span>♙</span>
         My Profile
       </button>
 
-      <button
-        type="button"
-        [class.active]="activeTab === 'agent'"
-        (click)="changeTab('agent')">
+      <button type="button" [class.active]="activeTab === 'agent'" (click)="changeTab('agent')">
         <span>✦</span>
         AI Agent Settings
       </button>
 
-      <button
-        type="button"
-        [class.active]="activeTab === 'phone'"
-        (click)="changeTab('phone')">
+      <button type="button" [class.active]="activeTab === 'phone'" (click)="changeTab('phone')">
         <span>☎</span>
         Phone Settings
       </button>
     </nav>
 
     <div class="settings-content">
-
       <!-- MY PROFILE -->
       @if (activeTab === 'profile') {
         <section class="panel">
@@ -75,8 +63,7 @@
                 readonly
               />
               <small>
-                This email is permanently linked to your account.
-                It cannot be changed in Settings.
+                This email is permanently linked to your account. It cannot be changed in Settings.
               </small>
             </div>
 
@@ -90,16 +77,11 @@
                 readonly
                 placeholder="Not available"
               />
-              <small>
-                Profile editing will be available in a future update.
-              </small>
+              <small> Profile editing will be available in a future update. </small>
             </div>
 
             <div class="form-actions">
-              <button
-                type="submit"
-                class="primary-button"
-                disabled>
+              <button type="submit" class="primary-button" disabled>
                 Save Profile (Coming Soon)
               </button>
             </div>
@@ -112,10 +94,7 @@
         <section class="panel">
           <div class="panel-heading">
             <h2>AI Agent Settings</h2>
-            <p>
-              Customize how your virtual receptionist handles
-              incoming calls.
-            </p>
+            <p>Customize how your virtual receptionist handles incoming calls.</p>
           </div>
 
           @if (agentLoading) {
@@ -123,16 +102,10 @@
           } @else if (agentError) {
             <div class="preview-note">
               {{ agentError }}
-              <button type="button" (click)="loadAgent()">
-                Retry
-              </button>
+              <button type="button" (click)="loadAgent()">Retry</button>
             </div>
           } @else if (agentLoaded) {
-
-            <form
-              (ngSubmit)="saveAgent()"
-              #agentForm="ngForm">
-
+            <form (ngSubmit)="saveAgent()" #agentForm="ngForm">
               <div class="setting-row">
                 <div>
                   <strong>AI Receptionist</strong>
@@ -152,31 +125,24 @@
               </div>
 
               <div class="field section-field">
-                <label for="agent-language">
-                  Preferred Language
-                </label>
+                <label for="agent-language"> Preferred Language </label>
 
                 <select
                   id="agent-language"
                   name="language"
                   [(ngModel)]="agent.language"
-                  [disabled]="agentSaving">
-                  <option value="auto">
-                    Automatic detection (English / Spanish)
-                  </option>
+                  [disabled]="agentSaving"
+                >
+                  <option value="auto">Automatic detection (English / Spanish)</option>
                   <option value="en">English</option>
                   <option value="es">Spanish</option>
                 </select>
 
-                <small>
-                  Automatic detection is recommended for bilingual callers.
-                </small>
+                <small> Automatic detection is recommended for bilingual callers. </small>
               </div>
 
               <div class="field section-field">
-                <label for="greeting-en">
-                  English Welcome Message
-                </label>
+                <label for="greeting-en"> English Welcome Message </label>
 
                 <textarea
                   id="greeting-en"
@@ -190,9 +156,7 @@
               </div>
 
               <div class="field section-field">
-                <label for="greeting-es">
-                  Spanish Welcome Message
-                </label>
+                <label for="greeting-es"> Spanish Welcome Message </label>
 
                 <textarea
                   id="greeting-es"
@@ -206,9 +170,7 @@
               </div>
 
               <div class="field section-field">
-                <label for="max-followups">
-                  Maximum Follow-up Questions
-                </label>
+                <label for="max-followups"> Maximum Follow-up Questions </label>
 
                 <input
                   id="max-followups"
@@ -222,18 +184,14 @@
                 />
 
                 <small>
-                  Maximum number of follow-up questions
-                  before the agent closes a conversation.
+                  Maximum number of follow-up questions before the agent closes a conversation.
                 </small>
               </div>
 
               <div class="setting-row border-top">
                 <div>
                   <strong>Early Spam Screening</strong>
-                  <p>
-                    End clearly unwanted sales calls before
-                    asking more questions.
-                  </p>
+                  <p>End clearly unwanted sales calls before asking more questions.</p>
                 </div>
 
                 <label class="switch">
@@ -251,10 +209,7 @@
               <div class="setting-row border-top">
                 <div>
                   <strong>Callback Phone Verification</strong>
-                  <p>
-                    Ask callers to confirm their preferred
-                    callback number.
-                  </p>
+                  <p>Ask callers to confirm their preferred callback number.</p>
                 </div>
 
                 <label class="switch">
@@ -273,12 +228,9 @@
                 <button
                   type="submit"
                   class="primary-button"
-                  [disabled]="agentSaving || agentForm.invalid">
-                  {{
-                    agentSaving
-                      ? 'Saving...'
-                      : 'Save Agent Settings'
-                  }}
+                  [disabled]="agentSaving || agentForm.invalid"
+                >
+                  {{ agentSaving ? 'Saving...' : 'Save Agent Settings' }}
                 </button>
               </div>
             </form>
@@ -288,65 +240,79 @@
 
       <!-- PHONE SETTINGS -->
 
+      <!-- PHONE SETTINGS -->
       @if (activeTab === 'phone') {
-        <section class="panel">
-          <div class="panel-heading">
-            <h2>Phone Settings</h2>
-            <p>
-              View the phone numbers connected to your
-              AI receptionist.
-            </p>
-          </div>
+        <div class="phone-settings-content">
+          <!-- CURRENT PHONE NUMBERS -->
+          <section class="panel">
+            <div class="phone-heading-row">
+              <div class="panel-heading">
+                <h2>Phone Settings</h2>
+                <p>View and manage the phone numbers connected to your AI receptionist.</p>
+              </div>
 
-          @if (phonesLoading) {
-            <p>Loading phone numbers...</p>
-          } @else if (phonesError) {
-            <div class="phone-note">
-              {{ phonesError }}
-              <button type="button" (click)="loadPhones()">
-                Retry
+              <button type="button" class="add-phone-btn" (click)="openAddPhoneDialog()">
+                <span aria-hidden="true">+</span>
+                Add Phone Number
               </button>
             </div>
-          } @else {
-            @for (line of phoneLines; track line.id) {
-              <div class="phone-card">
-                <div class="phone-icon">☎</div>
 
-                <div class="phone-info">
-                  <strong>
-                    {{ line.isPrimary ? 'Primary Number' : 'Additional Number' }}
-                  </strong>
-
-                  <span>{{ line.number }}</span>
-
-                  <small>
-                    {{ line.active ? 'Active' : 'Inactive' }}
-                  </small>
-                </div>
-
-                <div
-                  class="phone-status"
-                  [class.inactive]="!line.active">
-                  {{ line.active ? 'Active' : 'Inactive' }}
-                </div>
-              </div>
-            } @empty {
+            @if (phonesLoading) {
+              <div class="phone-note">Loading phone numbers...</div>
+            } @else if (phonesError) {
               <div class="phone-note">
-                No phone numbers are currently assigned
-                to your account.
+                {{ phonesError }}
+
+                <button type="button" (click)="loadPhones()">Retry</button>
               </div>
+            } @else {
+              @for (line of phoneLines; track line.id) {
+                <div class="phone-card">
+                  <div class="phone-icon">☎</div>
+
+                  <div class="phone-info">
+                    <strong>
+                      {{ line.isPrimary ? 'Primary Number' : 'Additional Number' }}
+                    </strong>
+
+                    <span>{{ line.number }}</span>
+
+                    <small>
+                      {{ line.active ? 'Active' : 'Inactive' }}
+                    </small>
+                  </div>
+
+                  <div class="phone-status" [class.inactive]="!line.active">
+                    {{ line.active ? 'Active' : 'Inactive' }}
+                  </div>
+                </div>
+              } @empty {
+                <div class="phone-note">
+                  No phone numbers are currently assigned to your account.
+                </div>
+              }
             }
-          }
 
-          <div class="phone-note">
-            Phone numbers are managed by Call Guardian AI.
-            Contact your administrator to request changes
-            or additional numbers.
-          </div>
-        </section>
+            <div class="phone-note">
+              Phone numbers are available according to your subscription plan and its limits. You
+              can add numbers when your plan has available capacity.
+            </div>
+          </section>
+
+          <!-- PHONE PURCHASE HISTORY -->
+          <app-phone-purchase-history />
+        </div>
+
+        <!-- ADD PHONE NUMBER DIALOG -->
+        @if (showAddPhoneDialog) {
+          <app-add-phone-number-dialog
+            mode="CLIENT"
+            accountName="My Account"
+            (orderCreated)="onPhoneOrderCreated()"
+            (closed)="closeAddPhoneDialog()"
+          />
+        }
       }
-
-
     </div>
   </div>
 </section>

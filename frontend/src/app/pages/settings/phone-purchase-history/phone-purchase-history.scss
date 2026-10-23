@@ -1,0 +1,261 @@
+
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.purchase-history {
+  width: 100%;
+  padding: 24px;
+  border: 1px solid #e0e6f0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #172b4d;
+  box-shadow: 0 2px 10px rgba(20, 40, 75, 0.025);
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+
+  h3 {
+    margin: 0 0 6px;
+    color: #182b4b;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    color: #7384a2;
+    font-size: 13px;
+  }
+}
+
+.refresh-btn,
+.cancel-btn,
+.confirm-btn,
+.secondary-btn,
+.page-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.refresh-btn {
+  background: #3467e8;
+  color: #fff;
+
+  &:hover {
+    background: #2856c9;
+  }
+}
+
+.cancel-btn {
+  background: #fff0f1;
+  color: #bd3447;
+
+  &:hover {
+    background: #ffe0e3;
+  }
+}
+
+.confirm-btn {
+  background: #c43f50;
+  color: #fff;
+}
+
+.secondary-btn,
+.page-btn {
+  background: #eff3f9;
+  color: #415676;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.history-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th {
+  padding: 13px 12px;
+  color: #7a8ba6;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  background: #f8faff;
+  border-bottom: 1px solid #e1e7f1;
+}
+
+td {
+  padding: 15px 12px;
+  color: #314461;
+  font-size: 13px;
+  border-bottom: 1px solid #e9edf4;
+  vertical-align: middle;
+}
+
+tbody tr:hover {
+  background: #f8faff;
+}
+
+.phone-value {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  strong {
+    color: #193354;
+    white-space: nowrap;
+  }
+
+  small {
+    color: #8495ae;
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #eef2f8;
+  color: #4a5f7e;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.pending {
+    background: #fff1d5;
+    color: #94600c;
+  }
+
+  &.completed {
+    background: #dff7ec;
+    color: #197750;
+  }
+
+  &.canceled {
+    background: #edf0f5;
+    color: #64738a;
+  }
+
+  &.failed {
+    background: #ffe6e9;
+    color: #ad3041;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+
+  span {
+    width: 100%;
+    color: #a83a49;
+    font-size: 12px;
+  }
+}
+
+.no-action {
+  color: #9aa9be;
+}
+
+.empty-state {
+  padding: 36px 18px;
+  text-align: center;
+  color: #8090a9;
+
+  strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #1c3050;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.feedback {
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  &.error {
+    background: #fff0f1;
+    color: #ad3041;
+  }
+
+  &.success {
+    background: #e4f8ed;
+    color: #197750;
+  }
+}
+
+.history-note {
+  margin: 16px 0 0;
+  color: #8494ac;
+  font-size: 12px;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.pagination-info {
+  color: #71839d;
+  font-size: 12px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  span {
+    color: #455a78;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 600px) {
+  .purchase-history {
+    padding: 16px;
+  }
+
+  .pagination-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

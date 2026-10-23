@@ -229,10 +229,81 @@
       purchases will require explicit Super Admin authorization.
     </div>
 
+    @if (reviewingOrder && selectedNumber) {
+      <div class="order-review">
+        <h3>Review Purchase Order</h3>
+
+        <div class="review-row">
+          <span>Phone number</span>
+          <strong>
+            {{ formatNumber(selectedNumber.phoneNumber) }}
+          </strong>
+        </div>
+
+        <div class="review-row">
+          <span>Upfront Telnyx cost</span>
+          <strong>
+            {{ price(selectedNumber.costInformation?.upfront_cost) }}
+          </strong>
+        </div>
+
+        <div class="review-row">
+          <span>Monthly Telnyx cost</span>
+          <strong>
+            {{ price(selectedNumber.costInformation?.monthly_cost) }}
+          </strong>
+        </div>
+
+        <div class="order-disclaimer">
+          You are creating a purchase request only. No payment will be collected and no Telnyx
+          number will be purchased at this stage.
+        </div>
+
+        @if (orderError) {
+          <div class="message error" role="alert">
+            {{ orderError }}
+          </div>
+        }
+
+        <div class="review-actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            [disabled]="creatingOrder"
+            (click)="closeOrderReview()"
+          >
+            Back
+          </button>
+
+          <button
+            type="button"
+            class="btn-purchase"
+            [disabled]="creatingOrder"
+            (click)="createOrder()"
+          >
+            {{ creatingOrder ? 'Creating...' : 'Confirm & Create Order' }}
+          </button>
+        </div>
+      </div>
+    }
+
     <footer class="dialog-actions">
       <button type="button" class="btn-secondary" (click)="close()">Close</button>
 
-      <button type="button" class="btn-purchase" disabled>Purchase Number — Not Enabled Yet</button>
+      @if (mode === 'CLIENT') {
+        <button
+          type="button"
+          class="btn-purchase"
+          [disabled]="!canCreateOrder"
+          (click)="openOrderReview()"
+        >
+          Review & Create Order
+        </button>
+      } @else {
+        <button type="button" class="btn-purchase" disabled>
+          Purchase Number — Not Enabled Yet
+        </button>
+      }
     </footer>
   </section>
 </div>

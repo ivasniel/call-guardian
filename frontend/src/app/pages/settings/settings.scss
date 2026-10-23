@@ -380,3 +380,85 @@
     color: #697386;
   }
 }
+
+
+.phone-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 24px;
+
+  .panel-heading {
+    flex: 1;
+    min-width: 220px;
+    margin-bottom: 0;
+  }
+}
+
+.phone-heading-row .add-phone-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 42px;
+  padding: 10px 18px;
+
+  border: 1px solid #315ee6;
+  border-radius: 9px;
+  background: #3467e8;
+  color: #ffffff;
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 9px rgba(52, 103, 232, 0.14);
+
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    background: #2554cc;
+    box-shadow: 0 5px 13px rgba(52, 103, 232, 0.2);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid #a3bdff;
+    outline-offset: 2px;
+  }
+
+  span {
+    font-size: 19px;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .phone-heading-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .phone-heading-row .add-phone-btn {
+    width: 100%;
+  }
+}
+.phone-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: 100%;
+  min-width: 0;
+}

@@ -1,0 +1,151 @@
+<section class="purchase-history">
+  <header class="section-header">
+    <div>
+      <h3>Phone Number Purchase History</h3>
+      <p>Review number orders, costs, and purchase status.</p>
+    </div>
+
+    <button type="button" class="refresh-btn" (click)="load()" [disabled]="loading">
+      {{ loading ? 'Loading...' : 'Refresh' }}
+    </button>
+  </header>
+
+  @if (error) {
+    <div class="feedback error" role="alert">
+      {{ error }}
+    </div>
+  }
+
+  @if (success) {
+    <div class="feedback success" role="status">
+      {{ success }}
+    </div>
+  }
+
+  @if (loading && orders.length === 0) {
+    <div class="empty-state">Loading your purchase history...</div>
+  } @else if (!loading && orders.length === 0 && !error) {
+    <div class="empty-state">
+      <strong>No phone number purchases yet</strong>
+      <p>Your number purchase orders will appear here.</p>
+    </div>
+  }
+
+  @if (orders.length > 0) {
+    <div class="history-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Phone Number</th>
+            <th>Requested</th>
+            <th>Upfront</th>
+            <th>Monthly</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (order of paginatedOrders; track order.id) {
+            <tr>
+              <td>
+                <div class="phone-value">
+                  <strong>
+                    {{ formatPhone(order.phoneNumber) }}
+                  </strong>
+                  <small>Order #{{ order.id }}</small>
+                </div>
+              </td>
+
+              <td>
+                {{ order.createdAt | date: 'mediumDate' }}
+              </td>
+
+              <td>
+                {{ money(order.upfrontCost, order.currency) }}
+              </td>
+
+              <td>
+                {{ money(order.monthlyCost, order.currency) }}
+              </td>
+
+              <td>
+                <span
+                  class="status-badge"
+                  [class.pending]="order.status === 'PENDING_PAYMENT'"
+                  [class.completed]="order.status === 'COMPLETED'"
+                  [class.canceled]="order.status === 'CANCELED'"
+                  [class.failed]="
+                    order.status === 'FAILED' || order.status === 'RECONCILIATION_REQUIRED'
+                  "
+                >
+                  {{ statusLabel(order.status) }}
+                </span>
+              </td>
+
+              <td>
+                @if (confirmingOrderId === order.id) {
+                  <div class="confirm-actions">
+                    <span>Cancel this order?</span>
+
+                    <button type="button" class="confirm-btn" (click)="confirmCancel(order)">
+                      Yes, cancel
+                    </button>
+
+                    <button type="button" class="secondary-btn" (click)="dismissCancel()">
+                      Keep
+                    </button>
+                  </div>
+                } @else if (canCancel(order)) {
+                  <button
+                    type="button"
+                    class="cancel-btn"
+                    [disabled]="cancelingOrderId !== null"
+                    (click)="askCancel(order)"
+                  >
+                    {{ cancelingOrderId === order.id ? 'Canceling...' : 'Cancel Order' }}
+                  </button>
+                } @else {
+                  <span class="no-action">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar">
+      <span class="pagination-info">
+        Showing {{ showingFrom }}–{{ showingTo }} of {{ totalItems }} orders
+      </span>
+
+      <div class="pagination-controls">
+        <button
+          type="button"
+          class="page-btn"
+          [disabled]="currentPage === 1"
+          (click)="previousPage()"
+        >
+          Previous
+        </button>
+
+        <span> {{ currentPage }} / {{ totalPages }} </span>
+
+        <button
+          type="button"
+          class="page-btn"
+          [disabled]="currentPage >= totalPages"
+          (click)="nextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+
+    <p class="history-note">
+      Order prices are recorded from Telnyx quotations. A pending order does not mean a number has
+      been purchased.
+    </p>
+  }
+</section>

@@ -1,4 +1,3 @@
-
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -7,20 +6,11 @@ import { Observable } from 'rxjs';
 // ACCOUNT TYPES
 // ============================================================
 
-export type AccountStatus =
-  | 'ACTIVE'
-  | 'SUSPENDED'
-  | 'CANCELED';
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'CANCELED';
 
-export type AccountType =
-  | 'BUSINESS'
-  | 'PERSONAL';
+export type AccountType = 'BUSINESS' | 'PERSONAL';
 
-export type AdminLockMode =
-  | 'NONE'
-  | 'PURCHASES'
-  | 'SERVICE'
-  | 'FULL';
+export type AdminLockMode = 'NONE' | 'PURCHASES' | 'SERVICE' | 'FULL';
 
 // ============================================================
 // PHONE NUMBER SEARCH
@@ -156,12 +146,7 @@ export interface AccountSubscription {
 
   source: 'PAID' | 'ADMIN_COURTESY';
 
-  status:
-    | 'PENDING'
-    | 'ACTIVE'
-    | 'PAST_DUE'
-    | 'EXPIRED'
-    | 'CANCELED';
+  status: 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | 'CANCELED';
 
   starts_at: string;
   ends_at: string;
@@ -219,51 +204,29 @@ export class AdminAccountsService {
     status?: string;
     accountType?: AccountType | 'ALL';
   }): Observable<AdminAccountsResponse> {
-
     let httpParams = new HttpParams()
       .set('page', String(params.page))
       .set('pageSize', String(params.pageSize));
 
     if (params.search?.trim()) {
-      httpParams = httpParams.set(
-        'search',
-        params.search.trim(),
-      );
+      httpParams = httpParams.set('search', params.search.trim());
     }
 
     if (params.status && params.status !== 'ALL') {
-      httpParams = httpParams.set(
-        'status',
-        params.status,
-      );
+      httpParams = httpParams.set('status', params.status);
     }
 
-    if (
-      params.accountType &&
-      params.accountType !== 'ALL'
-    ) {
-      httpParams = httpParams.set(
-        'accountType',
-        params.accountType,
-      );
+    if (params.accountType && params.accountType !== 'ALL') {
+      httpParams = httpParams.set('accountType', params.accountType);
     }
 
-    return this.http.get<AdminAccountsResponse>(
-      this.apiUrl,
-      {
-        params: httpParams,
-      },
-    );
+    return this.http.get<AdminAccountsResponse>(this.apiUrl, {
+      params: httpParams,
+    });
   }
 
-  create(
-    payload: CreateAdminAccountRequest,
-  ): Observable<CreatedAdminAccount> {
-
-    return this.http.post<CreatedAdminAccount>(
-      this.apiUrl,
-      payload,
-    );
+  create(payload: CreateAdminAccountRequest): Observable<CreatedAdminAccount> {
+    return this.http.post<CreatedAdminAccount>(this.apiUrl, payload);
   }
 
   // ==========================================================
@@ -280,19 +243,15 @@ export class AdminAccountsService {
     mode: string;
     reason: string;
   }> {
-
     return this.http.put<{
       accountId: number;
       locked: boolean;
       mode: string;
       reason: string;
-    }>(
-      `${this.apiUrl}/${accountId}/lock`,
-      {
-        mode,
-        reason,
-      },
-    );
+    }>(`${this.apiUrl}/${accountId}/lock`, {
+      mode,
+      reason,
+    });
   }
 
   unlockAccount(
@@ -303,45 +262,29 @@ export class AdminAccountsService {
     locked: boolean;
     mode: string;
   }> {
-
     return this.http.put<{
       accountId: number;
       locked: boolean;
       mode: string;
-    }>(
-      `${this.apiUrl}/${accountId}/unlock`,
-      {
-        reason,
-      },
-    );
+    }>(`${this.apiUrl}/${accountId}/unlock`, {
+      reason,
+    });
   }
 
   // ==========================================================
   // SUBSCRIPTIONS
   // ==========================================================
 
-  getSubscription(
-    accountId: number,
-  ): Observable<AccountSubscriptionResponse> {
-
-    return this.http.get<AccountSubscriptionResponse>(
-      `${this.apiUrl}/${accountId}/subscription`,
-    );
+  getSubscription(accountId: number): Observable<AccountSubscriptionResponse> {
+    return this.http.get<AccountSubscriptionResponse>(`${this.apiUrl}/${accountId}/subscription`);
   }
 
   // ==========================================================
   // COURTESY PLAN MANAGEMENT
   // ==========================================================
 
-  grantCourtesy(
-    accountId: number,
-    input: CourtesyPlanInput,
-  ): Observable<unknown> {
-
-    return this.http.post<unknown>(
-      `${this.apiUrl}/${accountId}/courtesy`,
-      input,
-    );
+  grantCourtesy(accountId: number, input: CourtesyPlanInput): Observable<unknown> {
+    return this.http.post<unknown>(`${this.apiUrl}/${accountId}/courtesy`, input);
   }
 
   extendCourtesy(
@@ -349,38 +292,26 @@ export class AdminAccountsService {
     additionalDays: number,
     reason: string,
   ): Observable<CourtesyActionResponse> {
-
-    return this.http.put<CourtesyActionResponse>(
-      `${this.apiUrl}/${accountId}/courtesy/extend`,
-      {
-        additionalDays,
-        reason,
-      },
-    );
+    return this.http.put<CourtesyActionResponse>(`${this.apiUrl}/${accountId}/courtesy/extend`, {
+      additionalDays,
+      reason,
+    });
   }
 
   updateCourtesyLimits(
     accountId: number,
     input: Omit<CourtesyPlanInput, 'durationDays'>,
   ): Observable<CourtesyActionResponse> {
-
     return this.http.put<CourtesyActionResponse>(
       `${this.apiUrl}/${accountId}/courtesy/limits`,
       input,
     );
   }
 
-  revokeCourtesy(
-    accountId: number,
-    reason: string,
-  ): Observable<CourtesyActionResponse> {
-
-    return this.http.put<CourtesyActionResponse>(
-      `${this.apiUrl}/${accountId}/courtesy/revoke`,
-      {
-        reason,
-      },
-    );
+  revokeCourtesy(accountId: number, reason: string): Observable<CourtesyActionResponse> {
+    return this.http.put<CourtesyActionResponse>(`${this.apiUrl}/${accountId}/courtesy/revoke`, {
+      reason,
+    });
   }
 
   // ==========================================================
@@ -392,38 +323,25 @@ export class AdminAccountsService {
     accountId: number,
     filters: PhoneNumberSearchFilters,
   ): Observable<AvailableNumbersResponse> {
-
     let params = new HttpParams();
 
     // Quick or advanced area code search.
     if (filters.areaCode?.trim()) {
-      params = params.set(
-        'areaCode',
-        filters.areaCode.trim(),
-      );
+      params = params.set('areaCode', filters.areaCode.trim());
     }
 
     // Advanced search by US state.
     if (filters.state?.trim()) {
-      params = params.set(
-        'state',
-        filters.state.trim().toUpperCase(),
-      );
+      params = params.set('state', filters.state.trim().toUpperCase());
     }
 
     // Advanced search by city/locality.
     if (filters.city?.trim()) {
-      params = params.set(
-        'city',
-        filters.city.trim(),
-      );
+      params = params.set('city', filters.city.trim());
     }
 
     // Strict results or Telnyx alternatives.
-    params = params.set(
-      'bestEffort',
-      String(filters.bestEffort ?? false),
-    );
+    params = params.set('bestEffort', String(filters.bestEffort ?? false));
 
     return this.http.get<AvailableNumbersResponse>(
       `${this.apiUrl}/${accountId}/available-numbers`,
@@ -432,4 +350,36 @@ export class AdminAccountsService {
       },
     );
   }
+
+  private buildNumberSearchParams(filters: PhoneNumberSearchFilters): HttpParams {
+    let params = new HttpParams();
+
+    if (filters.areaCode?.trim()) {
+      params = params.set('areaCode', filters.areaCode.trim());
+    }
+
+    if (filters.state?.trim()) {
+      params = params.set('state', filters.state.trim().toUpperCase());
+    }
+
+    if (filters.city?.trim()) {
+      params = params.set('city', filters.city.trim());
+    }
+
+    params = params.set('bestEffort', String(filters.bestEffort ?? false));
+
+    return params;
+  }
+
+searchMyAvailableNumbers(
+  filters: PhoneNumberSearchFilters,
+): Observable<AvailableNumbersResponse> {
+  return this.http.get<AvailableNumbersResponse>(
+    '/account/available-numbers',
+    {
+      params: this.buildNumberSearchParams(filters),
+    },
+  );
+}
+
 }

@@ -1,10 +1,4 @@
-
-import {
-  ChangeDetectorRef,
-  Component,
-  OnInit,
-  inject,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
@@ -15,11 +9,10 @@ import {
   AccountSettings,
   AccountSettingsApiService,
 } from '../../services/account-settings.service';
-import {
-  AccountPhonesService,
-  AccountPhone,
-} from '../../services/account-phones.service';
-
+import { AccountPhonesService, AccountPhone } from '../../services/account-phones.service';
+import { AddPhoneNumberDialog } from '../admin/clients/phones/add-phone-number-dialog';
+import { PhonePurchaseHistory } from './phone-purchase-history/phone-purchase-history';
+import { ViewChild } from '@angular/core';
 type SettingsTab = 'profile' | 'agent' | 'phone';
 
 interface ProfileSettings {
@@ -56,7 +49,7 @@ interface CurrentUser {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PhonePurchaseHistory, AddPhoneNumberDialog],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -66,6 +59,25 @@ export class Settings implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly phonesApi = inject(AccountPhonesService);
+  @ViewChild(PhonePurchaseHistory)
+  purchaseHistory?: PhonePurchaseHistory;
+
+  onPhoneOrderCreated(): void {
+    this.purchaseHistory?.load();
+  }
+  // =====================================================
+  // ADD PHONE NUMBER DIALOG
+  // =====================================================
+
+  showAddPhoneDialog = false;
+
+  openAddPhoneDialog(): void {
+    this.showAddPhoneDialog = true;
+  }
+
+  closeAddPhoneDialog(): void {
+    this.showAddPhoneDialog = false;
+  }
 
   activeTab: SettingsTab = 'profile';
 
@@ -110,7 +122,8 @@ export class Settings implements OnInit {
   loadProfile(): void {
     this.profileLoading = true;
 
-    this.http.get<CurrentUser>('/auth/me')
+    this.http
+      .get<CurrentUser>('/auth/me')
       .pipe(
         finalize(() => {
           this.profileLoading = false;
@@ -118,7 +131,7 @@ export class Settings implements OnInit {
         }),
       )
       .subscribe({
-        next: user => {
+        next: (user) => {
           this.profile = {
             name: user.name || '',
             email: user.email || '',
@@ -127,10 +140,7 @@ export class Settings implements OnInit {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.notify.error(
-            'Profile unavailable',
-            'Could not load your account information.',
-          );
+          this.notify.error('Profile unavailable', 'Could not load your account information.');
           this.cdr.markForCheck();
         },
       });
@@ -141,7 +151,8 @@ export class Settings implements OnInit {
     this.agentLoaded = false;
     this.agentError = '';
 
-    this.accountApi.get()
+    this.accountApi
+      .get()
       .pipe(
         finalize(() => {
           this.agentLoading = false;
@@ -149,17 +160,14 @@ export class Settings implements OnInit {
         }),
       )
       .subscribe({
-        next: settings => {
+        next: (settings) => {
           this.applyAgentSettings(settings);
           this.agentLoaded = true;
           this.cdr.markForCheck();
         },
         error: () => {
           this.agentError = 'Unable to load AI Agent Settings.';
-          this.notify.error(
-            'Settings unavailable',
-            this.agentError,
-          );
+          this.notify.error('Settings unavailable', this.agentError);
           this.cdr.markForCheck();
         },
       });
@@ -194,10 +202,7 @@ export class Settings implements OnInit {
       this.agent.maxFollowUps < 1 ||
       this.agent.maxFollowUps > 15
     ) {
-      this.notify.warning(
-        'Invalid question limit',
-        'Choose a value between 1 and 15.',
-      );
+      this.notify.warning('Invalid question limit', 'Choose a value between 1 and 15.');
       return;
     }
 
@@ -216,15 +221,16 @@ export class Settings implements OnInit {
 
     this.agentSaving = true;
 
-    this.accountApi.update({
-      agentEnabled: this.agent.enabled,
-      language: this.agent.language,
-      greetingEn: this.agent.greetingEn.trim(),
-      greetingEs: this.agent.greetingEs.trim(),
-      maxFollowups: this.agent.maxFollowUps,
-      earlySpamScreening: this.agent.spamScreening,
-      callbackVerification: this.agent.askCallbackPhone,
-    })
+    this.accountApi
+      .update({
+        agentEnabled: this.agent.enabled,
+        language: this.agent.language,
+        greetingEn: this.agent.greetingEn.trim(),
+        greetingEs: this.agent.greetingEs.trim(),
+        maxFollowups: this.agent.maxFollowUps,
+        earlySpamScreening: this.agent.spamScreening,
+        callbackVerification: this.agent.askCallbackPhone,
+      })
       .pipe(
         finalize(() => {
           this.agentSaving = false;
@@ -232,7 +238,7 @@ export class Settings implements OnInit {
         }),
       )
       .subscribe({
-        next: settings => {
+        next: (settings) => {
           this.applyAgentSettings(settings);
           this.notify.success(
             'Settings saved',
@@ -240,7 +246,7 @@ export class Settings implements OnInit {
           );
           this.cdr.markForCheck();
         },
-        error: error => {
+        error: (error) => {
           const message =
             typeof error.error?.message === 'string'
               ? error.error.message
@@ -263,38 +269,31 @@ export class Settings implements OnInit {
 
     if (!confirmed) return;
 
-    this.notify.info(
-      'Coming soon',
-      'Phone line status has not been changed in Telnyx or MySQL.',
-    );
+    this.notify.info('Coming soon', 'Phone line status has not been changed in Telnyx or MySQL.');
   }
 
+  loadPhones(): void {
+    this.phonesLoading = true;
+    this.phonesError = '';
 
-loadPhones(): void {
-  this.phonesLoading = true;
-  this.phonesError = '';
-
-  this.phonesApi.getAll()
-    .pipe(
-      finalize(() => {
-        this.phonesLoading = false;
-        this.cdr.markForCheck();
-      }),
-    )
-    .subscribe({
-      next: phones => {
-        this.phoneLines = phones;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.phonesError = 'Unable to load phone numbers.';
-        this.notify.error(
-          'Phone numbers unavailable',
-          this.phonesError,
-        );
-        this.cdr.markForCheck();
-      },
-    });
-}
-
+    this.phonesApi
+      .getAll()
+      .pipe(
+        finalize(() => {
+          this.phonesLoading = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (phones) => {
+          this.phoneLines = phones;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.phonesError = 'Unable to load phone numbers.';
+          this.notify.error('Phone numbers unavailable', this.phonesError);
+          this.cdr.markForCheck();
+        },
+      });
+  }
 }

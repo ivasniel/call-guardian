@@ -428,3 +428,70 @@ button:disabled {
   }
 }
 
+
+.order-review {
+  flex-shrink: 0;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #4969a1;
+  border-radius: 12px;
+  background: #1c304e;
+  color: #f4f7fb;
+
+  h3 {
+    margin: 0 0 18px;
+    font-size: 17px;
+  }
+}
+
+.review-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid #344a6d;
+
+  span {
+    color: #aebfd9;
+    font-size: 13px;
+  }
+
+  strong {
+    font-size: 14px;
+  }
+}
+
+.order-disclaimer {
+  margin: 17px 0;
+  padding: 13px;
+  border-radius: 8px;
+  background: #34402d;
+  color: #e5eec7;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.review-actions button {
+  padding: 11px 16px;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.review-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+

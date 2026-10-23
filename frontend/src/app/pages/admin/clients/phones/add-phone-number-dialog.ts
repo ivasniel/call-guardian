@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,8 @@ import {
   PhoneNumberSearchFilters,
 } from '../../../../services/admin-accounts.service';
 
+import { PhonePurchasesService } from '../../../../services/phone-purchases.service';
+
 @Component({
   selector: 'app-add-phone-number-dialog',
   standalone: true,
@@ -19,8 +21,9 @@ import {
   styleUrl: './add-phone-number-dialog.scss',
 })
 export class AddPhoneNumberDialog implements OnInit {
-  @Input({ required: true }) accountId!: number;
+  @Input() accountId: number | null = null;
   @Input() accountName = '';
+  @Input() mode: 'ADMIN' | 'CLIENT' = 'ADMIN';
 
   @Output() closed = new EventEmitter<void>();
 
@@ -103,6 +106,79 @@ export class AddPhoneNumberDialog implements OnInit {
     this.cdr.detectChanges();
   }
 
+  @Output() orderCreated = new EventEmitter<void>();
+
+  reviewingOrder = false;
+  creatingOrder = false;
+  orderError = '';
+  orderSuccess = '';
+
+  private readonly purchasesApi = inject(PhonePurchasesService);
+
+  get canCreateOrder(): boolean {
+    return (
+      this.mode === 'CLIENT' &&
+      this.selectedNumber !== null &&
+      this.selectedNumber.supportsVoice &&
+      !this.loading &&
+      !this.creatingOrder
+    );
+  }
+
+  openOrderReview(): void {
+    if (!this.canCreateOrder) return;
+
+    this.orderError = '';
+    this.orderSuccess = '';
+    this.reviewingOrder = true;
+  }
+
+  closeOrderReview(): void {
+    if (this.creatingOrder) return;
+    this.reviewingOrder = false;
+  }
+
+  createOrder(): void {
+    if (!this.canCreateOrder || !this.reviewingOrder || !this.selectedNumber) {
+      return;
+    }
+
+    const phoneNumber = this.selectedNumber.phoneNumber;
+
+    this.creatingOrder = true;
+    this.orderError = '';
+
+    this.purchasesApi
+      .create(phoneNumber)
+      .pipe(
+        finalize(() => {
+          this.creatingOrder = false;
+          this.cdr.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.reviewingOrder = false;
+          this.selectedNumber = null;
+          this.result = null;
+
+          this.orderCreated.emit();
+          this.closed.emit();
+        },
+        error: (err: HttpErrorResponse) => {
+          const message = err.error?.message;
+
+          this.orderError = Array.isArray(message)
+            ? message.join(', ')
+            : typeof message === 'string'
+              ? message
+              : 'Unable to create purchase order.';
+
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
   constructor(
     private readonly api: AdminAccountsService,
     private readonly cdr: ChangeDetectorRef,
@@ -113,7 +189,9 @@ export class AddPhoneNumberDialog implements OnInit {
   }
 
   search(): void {
-    if (this.loading || !this.accountId) return;
+    if (this.loading || (this.mode === 'ADMIN' && !this.accountId)) {
+      return;
+    }
 
     let filters: PhoneNumberSearchFilters;
 
@@ -144,8 +222,12 @@ export class AddPhoneNumberDialog implements OnInit {
 
     this.cdr.detectChanges();
 
-    this.api
-      .searchAvailableNumbers(this.accountId, filters)
+    const request$ =
+      this.mode === 'CLIENT'
+        ? this.api.searchMyAvailableNumbers(filters)
+        : this.api.searchAvailableNumbers(this.accountId!, filters);
+
+    request$
       .pipe(
         finalize(() => {
           this.loading = false;
@@ -155,13 +237,18 @@ export class AddPhoneNumberDialog implements OnInit {
       .subscribe({
         next: (response: AvailableNumbersResponse) => {
           this.result = response;
+          this.cdr.detectChanges();
         },
         error: (err: HttpErrorResponse) => {
           const message = err?.error?.message;
 
           this.error = Array.isArray(message)
             ? message.join(', ')
-            : message || 'Unable to search phone numbers.';
+            : typeof message === 'string'
+              ? message
+              : 'Unable to search phone numbers.';
+
+          this.cdr.detectChanges();
         },
       });
   }
