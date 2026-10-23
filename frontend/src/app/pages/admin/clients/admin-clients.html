@@ -130,6 +130,10 @@
                         Unlock
                       </button>
                     }
+
+                    <button type="button" class="courtesy-action" (click)="openCourtesy(account)">
+                      Manage Plan
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -300,24 +304,18 @@
   </div>
 }
 
-
 @if (lockTarget) {
-  <div
-    class="modal-backdrop"
-    (click)="closeLockModal()">
-
+  <div class="modal-backdrop" (click)="closeLockModal()">
     <section
       class="modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="lock-client-title"
-      (click)="$event.stopPropagation()">
-
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
-          <h2 id="lock-client-title">
-            Administrative Restriction
-          </h2>
+          <h2 id="lock-client-title">Administrative Restriction</h2>
 
           <p>{{ lockTarget.name }}</p>
         </div>
@@ -327,7 +325,8 @@
           class="close-btn"
           [disabled]="lockSaving"
           aria-label="Close"
-          (click)="closeLockModal()">
+          (click)="closeLockModal()"
+        >
           ×
         </button>
       </header>
@@ -336,20 +335,10 @@
         <label>
           Restriction Type
 
-          <select
-            name="lockMode"
-            [(ngModel)]="lockMode"
-            [disabled]="lockSaving"
-            required>
-            <option value="PURCHASES">
-              Block Purchases
-            </option>
-            <option value="SERVICE">
-              Suspend Service
-            </option>
-            <option value="FULL">
-              Full Account Lock
-            </option>
+          <select name="lockMode" [(ngModel)]="lockMode" [disabled]="lockSaving" required>
+            <option value="PURCHASES">Block Purchases</option>
+            <option value="SERVICE">Suspend Service</option>
+            <option value="FULL">Full Account Lock</option>
           </select>
         </label>
 
@@ -363,13 +352,13 @@
             required
             maxlength="500"
             rows="4"
-            placeholder="Explain the reason for this restriction">
+            placeholder="Explain the reason for this restriction"
+          >
           </textarea>
         </label>
 
         <p class="form-note">
-          Administrative restrictions can only be removed
-          by a Super Admin. Changes will be recorded
+          Administrative restrictions can only be removed by a Super Admin. Changes will be recorded
           in the audit log.
         </p>
 
@@ -378,14 +367,16 @@
             type="button"
             class="btn btn-secondary"
             [disabled]="lockSaving"
-            (click)="closeLockModal()">
+            (click)="closeLockModal()"
+          >
             Cancel
           </button>
 
           <button
             type="submit"
             class="btn btn-primary"
-            [disabled]="lockSaving || !lockReason.trim()">
+            [disabled]="lockSaving || !lockReason.trim()"
+          >
             {{ lockSaving ? 'Saving...' : 'Apply Restriction' }}
           </button>
         </div>
@@ -394,3 +385,11 @@
   </div>
 }
 
+@if (courtesyAccountId !== null) {
+  <app-courtesy-plan-dialog
+    [accountId]="courtesyAccountId"
+    [accountName]="courtesyAccountName"
+    (closed)="closeCourtesy()"
+    (updated)="onCourtesyUpdated()"
+  />
+}

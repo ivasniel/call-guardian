@@ -13,10 +13,12 @@ import {
 
 import { AppNotificationService } from '../../../shared/services/app-notification.service';
 
+import { CourtesyPlanDialog } from '../plans/courtesy-plan-dialog';
+
 @Component({
   selector: 'app-admin-clients',
   standalone: true,
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, CourtesyPlanDialog],
   templateUrl: './admin-clients.html',
   styleUrl: './admin-clients.scss',
 })
@@ -50,6 +52,22 @@ export class AdminClients implements OnInit {
   showCreateForm = false;
 
   form: CreateAdminAccountRequest = this.emptyForm();
+
+  courtesyAccountId: number | null = null;
+  courtesyAccountName = '';
+
+  openCourtesy(account: AdminAccount) {
+    this.courtesyAccountId = account.id;
+    this.courtesyAccountName = account.name;
+  }
+
+  closeCourtesy() {
+    this.courtesyAccountId = null;
+  }
+
+  onCourtesyUpdated() {
+    this.loadAccounts();
+  }
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -151,7 +169,7 @@ export class AdminClients implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (createdAccount) => {
           this.showCreateForm = false;
           this.form = this.emptyForm();
           this.page = 1;
@@ -159,6 +177,8 @@ export class AdminClients implements OnInit {
           this.notifications.success('Customer account created successfully.');
 
           this.loadAccounts();
+          // Abrir automáticamente la asignación del plan.
+          this.openCourtesyAfterCreation(Number(createdAccount.id), createdAccount.name);
         },
         error: (error) => {
           const serverMessage = error.error?.message;
@@ -279,5 +299,10 @@ export class AdminClients implements OnInit {
           this.cdr.markForCheck();
         },
       });
+  }
+
+  private openCourtesyAfterCreation(accountId: number, accountName: string): void {
+    this.courtesyAccountId = accountId;
+    this.courtesyAccountName = accountName;
   }
 }

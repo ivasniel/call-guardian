@@ -460,3 +460,16 @@ td {
     min-width: 1000px;
   }
 }
+.courtesy-action {
+  background: #2758aa;
+  color: #fff;
+  border: 1px solid #4977c4;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #326dcf;
+  }
+}

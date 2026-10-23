@@ -1,0 +1,204 @@
+
+<div class="courtesy-backdrop" (click)="close()">
+  <section
+    class="courtesy-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Courtesy plan management"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="dialog-header">
+      <div>
+        <p class="eyebrow">SUPER ADMIN</p>
+        <h2>Courtesy Plan</h2>
+        <p class="subtitle">{{ accountName }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="close-btn"
+        (click)="close()"
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </header>
+
+    <div *ngIf="loading" class="info">Loading subscription...</div>
+
+    <ng-container *ngIf="!loading">
+
+      <div class="subscription-status">
+        <span>Current subscription</span>
+
+        <strong *ngIf="activeCourtesy" class="status active">
+          Active Courtesy
+        </strong>
+
+        <strong *ngIf="subscription && !activeCourtesy" class="status">
+          {{ subscription.plan_name }} — {{ subscription.status }}
+        </strong>
+
+        <strong *ngIf="!subscription" class="status">
+          No subscription
+        </strong>
+      </div>
+
+      <div class="subscription-details" *ngIf="subscription">
+        <div>
+          <small>Expires</small>
+          <strong>
+            {{ subscription.ends_at | date:'mediumDate' }}
+          </strong>
+        </div>
+
+        <div>
+          <small>Users</small>
+          <strong>{{ subscription.max_users }}</strong>
+        </div>
+
+        <div>
+          <small>Numbers</small>
+          <strong>{{ subscription.max_numbers }}</strong>
+        </div>
+
+        <div>
+          <small>AI minutes</small>
+          <strong>{{ subscription.included_minutes }}</strong>
+        </div>
+      </div>
+
+      <div class="mode-tabs" *ngIf="activeCourtesy">
+        <button type="button"
+          [class.selected]="mode === 'EXTEND'"
+          (click)="setMode('EXTEND')">
+          Extend
+        </button>
+        <button type="button"
+          [class.selected]="mode === 'LIMITS'"
+          (click)="setMode('LIMITS')">
+          Limits
+        </button>
+        <button type="button"
+          [class.selected]="mode === 'REVOKE'"
+          (click)="setMode('REVOKE')">
+          Revoke
+        </button>
+      </div>
+
+      <form *ngIf="!subscription || activeCourtesy"
+            (ngSubmit)="save()">
+
+        <div class="form-grid" *ngIf="mode === 'GRANT'">
+          <label>
+            Duration (days)
+            <input type="number"
+              name="durationDays"
+              [(ngModel)]="form.durationDays"
+              min="1" max="365" required />
+          </label>
+        </div>
+
+        <div class="form-grid"
+             *ngIf="mode === 'GRANT' || mode === 'LIMITS'">
+
+          <label>
+            Maximum users
+            <input type="number"
+              name="maxUsers"
+              [(ngModel)]="form.maxUsers"
+              min="1" required />
+          </label>
+
+          <label>
+            Maximum numbers
+            <input type="number"
+              name="maxNumbers"
+              [(ngModel)]="form.maxNumbers"
+              min="1" required />
+          </label>
+
+          <label>
+            Included calls
+            <input type="number"
+              name="includedCalls"
+              [(ngModel)]="form.includedCalls"
+              min="0" required />
+          </label>
+
+          <label>
+            Included minutes
+            <input type="number"
+              name="includedMinutes"
+              [(ngModel)]="form.includedMinutes"
+              min="0" required />
+          </label>
+
+          <label class="checkbox-field">
+            <input type="checkbox"
+              name="allowAdditionalNumbers"
+              [(ngModel)]="form.allowAdditionalNumbers" />
+            Allow additional numbers
+          </label>
+        </div>
+
+        <div class="form-grid" *ngIf="mode === 'EXTEND'">
+          <label>
+            Additional days
+            <input type="number"
+              name="additionalDays"
+              [(ngModel)]="additionalDays"
+              min="1" max="365" required />
+          </label>
+        </div>
+
+        <div class="warning" *ngIf="mode === 'REVOKE'">
+          Revoking this courtesy will remove its subscription
+          authorization immediately. This action does not release
+          any Telnyx phone numbers.
+        </div>
+
+        <label class="reason-field">
+          Reason
+          <textarea
+            name="reason"
+            [(ngModel)]="form.reason"
+            rows="3"
+            maxlength="500"
+            required
+            placeholder="Explain this administrative action">
+          </textarea>
+        </label>
+
+        <div *ngIf="error" class="error">{{ error }}</div>
+        <div *ngIf="success" class="success">{{ success }}</div>
+
+        <footer class="dialog-actions">
+          <button type="button"
+                  class="btn-secondary"
+                  (click)="close()">
+            Cancel
+          </button>
+
+          <button type="submit"
+                  class="btn-primary"
+                  [class.danger]="mode === 'REVOKE'"
+                  [disabled]="saving">
+            {{ saving ? 'Saving...' :
+               mode === 'GRANT' ? 'Assign Courtesy' :
+               mode === 'EXTEND' ? 'Extend Trial' :
+               mode === 'LIMITS' ? 'Update Limits' :
+               'Revoke Courtesy' }}
+          </button>
+        </footer>
+      </form>
+
+      <div *ngIf="subscription && !activeCourtesy"
+           class="info">
+        This subscription is not an active courtesy plan.
+        Review or end the existing subscription before
+        assigning another one.
+      </div>
+    </ng-container>
+  </section>
+</div>
