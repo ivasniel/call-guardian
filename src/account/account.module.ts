@@ -8,6 +8,7 @@ import { AccountSettingsService } from './account-settings.service';
 
 import { AccountPhonesController } from './account-phones.controller';
 import { AccountPhonesService } from './account-phones.service';
+import { AccountAccessPolicyService } from './account-access-policy.service';
 
 @Module({
   imports: [AuthModule],
@@ -18,10 +19,12 @@ import { AccountPhonesService } from './account-phones.service';
   providers: [
     AccountSettingsService,
     AccountPhonesService,
+    AccountAccessPolicyService,
   ],
   exports: [
     AccountSettingsService,
     AccountPhonesService,
+    AccountAccessPolicyService,
   ],
 })
 export class AccountModule {}

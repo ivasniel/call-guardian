@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import type { Assessment } from "../ai/classification.service";
-import type { AccountSettings } from '../account/account-settings.service';
+import type { AccountSettings } from "../account/account-settings.service";
 
 @Injectable()
 export class CallsService {
@@ -324,10 +324,10 @@ export class CallsService {
       ? parseNumber(params.pageSize, 10)
       : 10;
 
-const accountId = await this.accountForUser(userId);
+    const accountId = await this.accountForUser(userId);
 
-const filters = ['c.account_id = ?'];
-const values: Array<string | number> = [accountId];
+    const filters = ["c.account_id = ?"];
+    const values: Array<string | number> = [accountId];
 
     const search = (params.search || "").trim().slice(0, 120);
 
@@ -489,41 +489,35 @@ const values: Array<string | number> = [accountId];
     };
   }
 
+  async statsForUser(userId: number, period: string = "30d") {
+    const accountId = await this.accountForUser(userId);
+    const allowedPeriods = ["today", "7d", "30d", "all"];
 
-async statsForUser(
-  userId: number,
-  period: string = '30d',
-) {
-  const accountId = await this.accountForUser(userId);
-  const allowedPeriods = ['today', '7d', '30d', 'all'];
+    const selectedPeriod = allowedPeriods.includes(period) ? period : "30d";
 
-  const selectedPeriod = allowedPeriods.includes(period)
-    ? period
-    : '30d';
+    let dateFilter = "";
 
-  let dateFilter = '';
+    switch (selectedPeriod) {
+      case "today":
+        dateFilter = "AND c.started_at >= CURDATE()";
+        break;
+      case "7d":
+        dateFilter = "AND c.started_at >= NOW() - INTERVAL 7 DAY";
+        break;
+      case "30d":
+        dateFilter = "AND c.started_at >= NOW() - INTERVAL 30 DAY";
+        break;
+    }
 
-  switch (selectedPeriod) {
-    case 'today':
-      dateFilter = 'AND c.started_at >= CURDATE()';
-      break;
-    case '7d':
-      dateFilter = 'AND c.started_at >= NOW() - INTERVAL 7 DAY';
-      break;
-    case '30d':
-      dateFilter = 'AND c.started_at >= NOW() - INTERVAL 30 DAY';
-      break;
-  }
+    const baseWhere = `c.account_id = ? ${dateFilter}`;
 
-const baseWhere = `c.account_id = ? ${dateFilter}`;
-
-  const totals: Array<{
-    totalCalls: string | number;
-    highPriority: string | number;
-    spamBlocked: string | number;
-    callbacks: string | number;
-  }> = await this.db.query(
-    `SELECT
+    const totals: Array<{
+      totalCalls: string | number;
+      highPriority: string | number;
+      spamBlocked: string | number;
+      callbacks: string | number;
+    }> = await this.db.query(
+      `SELECT
        COUNT(*) AS totalCalls,
 
        COALESCE(SUM(
@@ -543,25 +537,25 @@ const baseWhere = `c.account_id = ? ${dateFilter}`;
 
      FROM calls c
      WHERE ${baseWhere}`,
-    [accountId],
-  );
+      [accountId],
+    );
 
-  const categoryRows: Array<{
-    category: string;
-    count: string | number;
-  }> = await this.db.query(
-    `SELECT
+    const categoryRows: Array<{
+      category: string;
+      count: string | number;
+    }> = await this.db.query(
+      `SELECT
        COALESCE(NULLIF(c.category, ''), 'UNKNOWN') AS category,
        COUNT(*) AS count
      FROM calls c
      WHERE ${baseWhere}
      GROUP BY COALESCE(NULLIF(c.category, ''), 'UNKNOWN')
      ORDER BY count DESC, category ASC`,
-    [userId],
-  );
+      [userId],
+    );
 
-  const recentCalls = await this.db.query(
-    `SELECT
+    const recentCalls = await this.db.query(
+      `SELECT
        c.id,
        c.from_e164 AS phone,
        c.caller_name AS callerName,
@@ -575,93 +569,99 @@ const baseWhere = `c.account_id = ? ${dateFilter}`;
      WHERE ${baseWhere}
      ORDER BY c.started_at DESC, c.id DESC
      LIMIT 5`,
-    [userId],
-  );
+      [userId],
+    );
 
-  const totalCalls = Number(totals[0]?.totalCalls ?? 0);
+    const totalCalls = Number(totals[0]?.totalCalls ?? 0);
 
-  const categories = categoryRows.map(row => {
-    const count = Number(row.count);
+    const categories = categoryRows.map((row) => {
+      const count = Number(row.count);
+
+      return {
+        name: row.category,
+        count,
+        percentage: totalCalls ? Math.round((count / totalCalls) * 100) : 0,
+      };
+    });
 
     return {
-      name: row.category,
-      count,
-      percentage: totalCalls
-        ? Math.round((count / totalCalls) * 100)
-        : 0,
+      period: selectedPeriod,
+      stats: {
+        totalCalls,
+        highPriority: Number(totals[0]?.highPriority ?? 0),
+        spamBlocked: Number(totals[0]?.spamBlocked ?? 0),
+        callbacks: Number(totals[0]?.callbacks ?? 0),
+      },
+      categories,
+      recentCalls,
     };
-  });
-
-  return {
-    period: selectedPeriod,
-    stats: {
-      totalCalls,
-      highPriority: Number(totals[0]?.highPriority ?? 0),
-      spamBlocked: Number(totals[0]?.spamBlocked ?? 0),
-      callbacks: Number(totals[0]?.callbacks ?? 0),
-    },
-    categories,
-    recentCalls,
-  };
-}
-
-async resolveIncomingAccount(
-  calledNumber: string,
-): Promise<{
-  accountId: number;
-  userId: number;
-  phoneNumberId: number;
-} | null> {
-  const phone = calledNumber.trim();
-
-  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
-    return null;
   }
 
-  const rows: Array<{
-    account_id: string | number;
-    user_id: string | number;
-    phone_number_id: string | number;
-  }> = await this.db.query(
-    `
-    SELECT
-      pn.id AS phone_number_id,
-      pn.account_id,
-      pn.user_id
-    FROM phone_numbers pn
-    INNER JOIN accounts a
-      ON a.id = pn.account_id
-    INNER JOIN users u
-      ON u.id = pn.user_id
+  async resolveIncomingAccount(calledNumber: string): Promise<{
+    accountId: number;
+    userId: number;
+    phoneNumberId: number;
+  } | null> {
+    if (
+      typeof calledNumber !== "string" ||
+      !/^\+[1-9]\d{7,14}$/.test(calledNumber.trim())
+    ) {
+      return null;
+    }
+
+    const rows: Array<{
+      phone_number_id: number | string;
+      account_id: number | string;
+      user_id: number | string;
+    }> = await this.db.query(
+      `SELECT
+       pn.id AS phone_number_id,
+       pn.account_id,
+       pn.user_id
+     FROM phone_numbers pn
+     INNER JOIN accounts a
+       ON a.id = pn.account_id
+     INNER JOIN users u
+       ON u.id = pn.user_id
       AND u.account_id = pn.account_id
-    WHERE pn.telnyx_e164 = ?
-      AND pn.active = 1
-      AND a.status = 'ACTIVE'
-      AND u.active = 1
-      AND u.role IN ('ACCOUNT_ADMIN', 'ACCOUNT_USER')
-    LIMIT 2
-    `,
-    [phone],
-  );
+     
+      WHERE pn.telnyx_e164 = ?
+        AND pn.active = 1
+        AND pn.admin_locked = 0
+        AND a.status = 'ACTIVE'
+        AND (
+          (
+            a.admin_locked = 0
+            AND a.admin_lock_mode = 'NONE'
+          )
+          OR
+          (
+            a.admin_locked = 1
+            AND a.admin_lock_mode = 'PURCHASES'
+          )
+        )
+        AND u.active = 1
+        AND u.role IN ('ACCOUNT_ADMIN', 'ACCOUNT_USER')
+      LIMIT 2`,
+      [calledNumber.trim(), calledNumber.trim()],
+    );
 
-  // Ningún número registrado o asignación ambigua.
-  // Nunca enviamos la llamada a una cuenta arbitraria.
-  if (rows.length !== 1) {
-    return null;
+    if (rows.length !== 1) {
+      return null;
+    }
+
+    return {
+      accountId: Number(rows[0].account_id),
+      userId: Number(rows[0].user_id),
+      phoneNumberId: Number(rows[0].phone_number_id),
+    };
   }
 
-  return {
-    accountId: Number(rows[0].account_id),
-    userId: Number(rows[0].user_id),
-    phoneNumberId: Number(rows[0].phone_number_id),
-  };
-}
-
-async accountForUser(userId: number): Promise<number> {
-  const rows: Array<{
-    account_id: string | number | null;
-  }> = await this.db.query(
-    `SELECT u.account_id
+  async accountForUser(userId: number): Promise<number> {
+    const rows: Array<{
+      account_id: string | number | null;
+    }> = await this.db.query(
+      `SELECT u.account_id
      FROM users u
      INNER JOIN accounts a ON a.id = u.account_id
      WHERE u.id = ?
@@ -669,53 +669,48 @@ async accountForUser(userId: number): Promise<number> {
        AND u.role IN ('ACCOUNT_ADMIN', 'ACCOUNT_USER')
        AND a.status = 'ACTIVE'
      LIMIT 1`,
-    [userId],
-  );
-
-  const accountId = Number(rows[0]?.account_id);
-
-  if (!Number.isSafeInteger(accountId) || accountId <= 0) {
-    throw new ForbiddenException(
-      'No active customer account assigned',
+      [userId],
     );
+
+    const accountId = Number(rows[0]?.account_id);
+
+    if (!Number.isSafeInteger(accountId) || accountId <= 0) {
+      throw new ForbiddenException("No active customer account assigned");
+    }
+
+    return accountId;
   }
 
-  return accountId;
-}
-
-async saveAgentSettingsSnapshot(
-  callId: string,
-  settings: AccountSettings,
-): Promise<void> {
-  await this.db.query(
-    `UPDATE calls
+  async saveAgentSettingsSnapshot(
+    callId: string,
+    settings: AccountSettings,
+  ): Promise<void> {
+    await this.db.query(
+      `UPDATE calls
      SET agent_settings_snapshot = ?
      WHERE call_control_id = ?
        AND agent_settings_snapshot IS NULL`,
-    [JSON.stringify(settings), callId],
-  );
-}
+      [JSON.stringify(settings), callId],
+    );
+  }
 
-async agentSettingsForCall(
-  callId: string,
-): Promise<AccountSettings | null> {
-  const rows: Array<{
-    agent_settings_snapshot: string | AccountSettings | null;
-  }> = await this.db.query(
-    `SELECT agent_settings_snapshot
+  async agentSettingsForCall(callId: string): Promise<AccountSettings | null> {
+    const rows: Array<{
+      agent_settings_snapshot: string | AccountSettings | null;
+    }> = await this.db.query(
+      `SELECT agent_settings_snapshot
      FROM calls
      WHERE call_control_id = ?
      LIMIT 1`,
-    [callId],
-  );
+      [callId],
+    );
 
-  const value = rows[0]?.agent_settings_snapshot;
+    const value = rows[0]?.agent_settings_snapshot;
 
-  if (!value) return null;
+    if (!value) return null;
 
-  return typeof value === 'string'
-    ? JSON.parse(value) as AccountSettings
-    : value;
-}
-
+    return typeof value === "string"
+      ? (JSON.parse(value) as AccountSettings)
+      : value;
+  }
 }
