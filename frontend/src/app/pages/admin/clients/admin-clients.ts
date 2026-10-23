@@ -1,19 +1,18 @@
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { finalize } from 'rxjs';
 
 import {
-  ChangeDetectorRef,
-  Component,
-  OnInit,
-  inject,
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
-import {
+  AccountType,
   AdminAccount,
   AdminAccountsService,
   CreateAdminAccountRequest,
+  AdminLockMode,
 } from '../../../services/admin-accounts.service';
+
 import { AppNotificationService } from '../../../shared/services/app-notification.service';
-import { DatePipe } from '@angular/common';
+
 @Component({
   selector: 'app-admin-clients',
   standalone: true,
@@ -23,16 +22,25 @@ import { DatePipe } from '@angular/common';
 })
 export class AdminClients implements OnInit {
   private readonly accountsService = inject(AdminAccountsService);
+
   private readonly notifications = inject(AppNotificationService);
+
   private readonly cdr = inject(ChangeDetectorRef);
 
+  lockTarget: AdminAccount | null = null;
+  lockMode: Exclude<AdminLockMode, 'NONE'> = 'PURCHASES';
+  lockReason = '';
+  lockSaving = false;
+
   accounts: AdminAccount[] = [];
+
   loading = false;
   saving = false;
   error = '';
 
   search = '';
   status = 'ALL';
+  accountType: AccountType | 'ALL' = 'ALL';
 
   page = 1;
   pageSize = 10;
@@ -50,6 +58,7 @@ export class AdminClients implements OnInit {
   private emptyForm(): CreateAdminAccountRequest {
     return {
       name: '',
+      accountType: 'BUSINESS',
       ownerName: '',
       ownerEmail: '',
       ownerPhone: '',
@@ -61,31 +70,35 @@ export class AdminClients implements OnInit {
     this.loading = true;
     this.error = '';
 
-    this.accountsService.list({
-      page: this.page,
-      pageSize: this.pageSize,
-      search: this.search,
-      status: this.status,
-    })
-    .pipe(finalize(() => {
-      this.loading = false;
-      this.cdr.markForCheck();
-    }))
-    .subscribe({
-      next: response => {
-        this.accounts = response.items;
-        this.page = response.pagination.page;
-        this.pageSize = response.pagination.pageSize;
-        this.totalItems = response.pagination.totalItems;
-        this.totalPages = response.pagination.totalPages;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.error = 'Unable to load customer accounts.';
-        this.notifications.error(this.error);
-        this.cdr.markForCheck();
-      },
-    });
+    this.accountsService
+      .list({
+        page: this.page,
+        pageSize: this.pageSize,
+        search: this.search,
+        status: this.status,
+        accountType: this.accountType,
+      })
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          this.accounts = response.items;
+          this.page = response.pagination.page;
+          this.pageSize = response.pagination.pageSize;
+          this.totalItems = response.pagination.totalItems;
+          this.totalPages = response.pagination.totalPages;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.error = 'Unable to load customer accounts.';
+          this.notifications.error(this.error);
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   applyFilters(): void {
@@ -94,11 +107,9 @@ export class AdminClients implements OnInit {
   }
 
   changePage(nextPage: number): void {
-    if (
-      nextPage < 1 ||
-      nextPage > this.totalPages ||
-      this.loading
-    ) return;
+    if (nextPage < 1 || nextPage > this.totalPages || this.loading) {
+      return;
+    }
 
     this.page = nextPage;
     this.loadAccounts();
@@ -125,28 +136,39 @@ export class AdminClients implements OnInit {
 
     this.saving = true;
 
-    this.accountsService.create(this.form)
-      .pipe(finalize(() => {
-        this.saving = false;
-        this.cdr.markForCheck();
-      }))
+    this.accountsService
+      .create({
+        ...this.form,
+        name: this.form.name.trim(),
+        ownerName: this.form.ownerName.trim(),
+        ownerEmail: this.form.ownerEmail.trim(),
+        ownerPhone: this.form.ownerPhone.trim(),
+      })
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+          this.cdr.markForCheck();
+        }),
+      )
       .subscribe({
         next: () => {
           this.showCreateForm = false;
           this.form = this.emptyForm();
           this.page = 1;
 
-          this.notifications.success(
-            'Customer account created successfully.',
-          );
+          this.notifications.success('Customer account created successfully.');
 
           this.loadAccounts();
         },
-        error: error => {
+        error: (error) => {
+          const serverMessage = error.error?.message;
+
           const message =
-            typeof error.error?.message === 'string'
-              ? error.error.message
-              : 'Unable to create customer account.';
+            typeof serverMessage === 'string'
+              ? serverMessage
+              : Array.isArray(serverMessage)
+                ? serverMessage.join(', ')
+                : 'Unable to create customer account.';
 
           this.notifications.error(message);
           this.cdr.markForCheck();
@@ -155,15 +177,107 @@ export class AdminClients implements OnInit {
   }
 
   get firstItem(): number {
-    return this.totalItems === 0
-      ? 0
-      : (this.page - 1) * this.pageSize + 1;
+    return this.totalItems === 0 ? 0 : (this.page - 1) * this.pageSize + 1;
   }
 
   get lastItem(): number {
-    return Math.min(
-      this.page * this.pageSize,
-      this.totalItems,
-    );
+    return Math.min(this.page * this.pageSize, this.totalItems);
+  }
+
+  openLockModal(account: AdminAccount): void {
+    this.lockTarget = account;
+    this.lockMode =
+      account.adminLocked && account.adminLockMode !== 'NONE' ? account.adminLockMode : 'PURCHASES';
+
+    this.lockReason = '';
+  }
+
+  closeLockModal(): void {
+    if (this.lockSaving) return;
+
+    this.lockTarget = null;
+    this.lockReason = '';
+  }
+
+  saveLock(): void {
+    if (!this.lockTarget || this.lockSaving) return;
+
+    const reason = this.lockReason.trim();
+
+    if (!reason || reason.length > 500) {
+      this.notifications.warning('Enter a reason between 1 and 500 characters.');
+      return;
+    }
+
+    const accountId = this.lockTarget.id;
+    this.lockSaving = true;
+
+    this.accountsService
+      .lockAccount(accountId, this.lockMode, reason)
+      .pipe(
+        finalize(() => {
+          this.lockSaving = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.lockTarget = null;
+          this.lockReason = '';
+
+          this.notifications.success('Administrative restriction saved.');
+
+          this.loadAccounts();
+        },
+        error: (error) => {
+          this.notifications.error(
+            typeof error.error?.message === 'string'
+              ? error.error.message
+              : 'Unable to update account restriction.',
+          );
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  async unlockAccount(account: AdminAccount): Promise<void> {
+    if (this.lockSaving || !account.adminLocked) return;
+
+    const confirmed = await this.notifications.confirm({
+      title: 'Unlock customer account?',
+      message: `Remove the administrative restriction from ${account.name}?`,
+      confirmText: 'Unlock Account',
+      danger: false,
+    });
+
+    if (!confirmed) return;
+
+    // The backend requires an audit reason.
+    const reason = 'Administrative restriction removed by Super Admin';
+
+    this.lockSaving = true;
+
+    this.accountsService
+      .unlockAccount(account.id, reason)
+      .pipe(
+        finalize(() => {
+          this.lockSaving = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.notifications.success('Account administrative restriction removed.');
+          this.loadAccounts();
+        },
+        error: (error) => {
+          this.notifications.error(
+            typeof error.error?.message === 'string'
+              ? error.error.message
+              : 'Unable to unlock account.',
+          );
+          this.cdr.markForCheck();
+        },
+      });
   }
 }

@@ -1,4 +1,3 @@
-
 import { Routes } from '@angular/router';
 
 // Layouts
@@ -12,6 +11,8 @@ import { Contacts } from './pages/contacts/contacts';
 import { Notifications } from './pages/notifications/notifications';
 import { Settings } from './pages/settings/settings';
 
+import { NotFound } from './pages/not-found/not-found';
+
 // Authentication
 import { Login } from './pages/login/login';
 
@@ -20,10 +21,7 @@ import { AdminDashboard } from './pages/admin/dashboard/admin-dashboard';
 
 // Guards
 import { authGuard } from './core/auth/auth.guard';
-import {
-  superAdminGuard,
-  customerGuard,
-} from './core/role.guard';
+import { superAdminGuard, customerGuard } from './core/role.guard';
 import { AdminClients } from './pages/admin/clients/admin-clients';
 
 export const routes: Routes = [
@@ -92,6 +90,6 @@ export const routes: Routes = [
   // Unknown routes
   {
     path: '**',
-    redirectTo: 'dashboard',
+    component: NotFound,
   },
 ];

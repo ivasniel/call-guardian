@@ -278,3 +278,185 @@ td {
     align-self: flex-start;
   }
 }
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+
+  .btn {
+    white-space: nowrap;
+  }
+}
+
+/* =========================================
+   Responsive Manage Clients
+========================================= */
+
+/* Allow flex/grid children to shrink correctly */
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.clients-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.clients-page .panel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Horizontal scrolling applies only to the table */
+.table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Preserve readable columns instead of squeezing them */
+.table-scroll table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+/* Do not break headers into multiple lines */
+.table-scroll th {
+  white-space: nowrap;
+}
+
+/* Keep badges, dates and actions together */
+.table-scroll td {
+  vertical-align: middle;
+}
+
+.table-scroll th,
+.table-scroll td {
+  padding: 16px 14px;
+}
+
+/* Account names can remain readable */
+.table-scroll td:first-child {
+  min-width: 170px;
+}
+
+.table-scroll td:first-child strong,
+.table-scroll td:first-child small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+/* Prevent unwanted wrapping of action buttons */
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.account-actions .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Filters adapt as viewport becomes smaller */
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.search-form {
+  display: flex;
+  flex: 1 1 360px;
+  min-width: 0;
+  gap: 10px;
+}
+
+.search-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filters > select {
+  flex: 0 1 190px;
+  min-width: 150px;
+}
+
+/* Responsive footer */
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Smaller screens */
+@media (max-width: 768px) {
+  .clients-page .page-heading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .filters {
+    align-items: stretch;
+  }
+
+  .search-form {
+    flex: 1 1 100%;
+  }
+
+  .filters > select {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  .table-scroll table {
+    min-width: 1050px;
+  }
+
+  .table-footer {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters > select {
+    flex: 1 1 100%;
+  }
+
+  .table-footer {
+    flex-direction: column;
+  }
+
+  .pagination {
+    width: 100%;
+  }
+
+  .table-scroll table {
+    min-width: 1000px;
+  }
+}

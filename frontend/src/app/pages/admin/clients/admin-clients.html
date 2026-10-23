@@ -1,4 +1,3 @@
-
 <section class="clients-page">
   <header class="page-heading">
     <div>
@@ -6,10 +5,7 @@
       <p>Manage customer accounts across Call Guardian AI.</p>
     </div>
 
-    <button class="btn btn-primary" type="button"
-            (click)="openCreateForm()">
-      + Add Client
-    </button>
+    <button class="btn btn-primary" type="button" (click)="openCreateForm()">+ Add Client</button>
   </header>
 
   <div class="panel">
@@ -19,17 +15,19 @@
           type="search"
           name="search"
           [(ngModel)]="search"
-          placeholder="Search by business name or slug"
+          placeholder="Search by account name or slug"
         />
-        <button type="submit" class="btn btn-secondary">
-          Search
-        </button>
+
+        <button type="submit" class="btn btn-secondary">Search</button>
       </form>
 
-      <select
-        name="status"
-        [(ngModel)]="status"
-        (ngModelChange)="applyFilters()">
+      <select name="accountType" [(ngModel)]="accountType" (ngModelChange)="applyFilters()">
+        <option value="ALL">All account types</option>
+        <option value="BUSINESS">Business</option>
+        <option value="PERSONAL">Personal</option>
+      </select>
+
+      <select name="status" [(ngModel)]="status" (ngModelChange)="applyFilters()">
         <option value="ALL">All statuses</option>
         <option value="ACTIVE">Active</option>
         <option value="SUSPENDED">Suspended</option>
@@ -42,26 +40,28 @@
     } @else if (error) {
       <div class="empty-state">
         {{ error }}
-        <button type="button" class="btn btn-secondary"
-                (click)="loadAccounts()">Retry</button>
+
+        <button type="button" class="btn btn-secondary" (click)="loadAccounts()">Retry</button>
       </div>
     } @else if (accounts.length === 0) {
-      <div class="empty-state">
-        No customer accounts found.
-      </div>
+      <div class="empty-state">No customer accounts found.</div>
     } @else {
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>Business</th>
+              <th>Account</th>
+              <th>Type</th>
               <th>Status</th>
               <th>Users</th>
               <th>Numbers</th>
               <th>Calls</th>
               <th>Created</th>
+              <th>Admin Lock</th>
+              <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
             @for (account of accounts; track account.id) {
               <tr>
@@ -69,18 +69,69 @@
                   <strong>{{ account.name }}</strong>
                   <small>{{ account.slug }}</small>
                 </td>
+
                 <td>
-                  <span class="status"
-                        [class.active]="account.status === 'ACTIVE'"
-                        [class.suspended]="account.status === 'SUSPENDED'"
-                        [class.canceled]="account.status === 'CANCELED'">
+                  <span
+                    class="status"
+                    [class.active]="account.accountType === 'BUSINESS'"
+                    [class.suspended]="account.accountType === 'PERSONAL'"
+                  >
+                    {{ account.accountType === 'PERSONAL' ? 'Personal' : 'Business' }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="status"
+                    [class.active]="account.status === 'ACTIVE'"
+                    [class.suspended]="account.status === 'SUSPENDED'"
+                    [class.canceled]="account.status === 'CANCELED'"
+                  >
                     {{ account.status }}
                   </span>
                 </td>
+
                 <td>{{ account.totalUsers }}</td>
                 <td>{{ account.totalNumbers }}</td>
                 <td>{{ account.totalCalls }}</td>
-                <td>{{ account.createdAt | date:'mediumDate' }}</td>
+
+                <td>
+                  {{ account.createdAt | date: 'mediumDate' }}
+                </td>
+
+                <td>
+                  @if (account.adminLocked) {
+                    <span class="status canceled">
+                      {{ account.adminLockMode }}
+                    </span>
+                  } @else {
+                    <span class="status active"> Unlocked </span>
+                  }
+                </td>
+
+                <td>
+                  <div class="account-actions">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      [disabled]="lockSaving"
+                      (click)="openLockModal(account)"
+                    >
+                      {{ account.adminLocked ? 'Change Lock' : 'Lock' }}
+                    </button>
+
+                    @if (account.adminLocked) {
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        [disabled]="lockSaving"
+                        (click)="unlockAccount(account)"
+                      >
+                        Unlock
+                      </button>
+                    }
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
@@ -89,32 +140,33 @@
     }
 
     <footer class="table-footer">
-      <span>
-        Showing {{ firstItem }}–{{ lastItem }}
-        of {{ totalItems }} clients
-      </span>
+      <span> Showing {{ firstItem }}–{{ lastItem }} of {{ totalItems }} clients </span>
 
       <div class="pagination">
-        <select
-          [ngModel]="pageSize"
-          (ngModelChange)="changePageSize($event.toString())">
+        <select [ngModel]="pageSize" (ngModelChange)="changePageSize($event.toString())">
           <option [ngValue]="10">10 per page</option>
           <option [ngValue]="20">20 per page</option>
           <option [ngValue]="50">50 per page</option>
           <option [ngValue]="100">100 per page</option>
         </select>
 
-        <button type="button" class="btn btn-secondary"
-                [disabled]="page <= 1 || loading"
-                (click)="changePage(page - 1)">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="page <= 1 || loading"
+          (click)="changePage(page - 1)"
+        >
           Previous
         </button>
 
         <span>{{ page }} / {{ totalPages }}</span>
 
-        <button type="button" class="btn btn-secondary"
-                [disabled]="page >= totalPages || loading"
-                (click)="changePage(page + 1)">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="page >= totalPages || loading"
+          (click)="changePage(page + 1)"
+        >
           Next
         </button>
       </div>
@@ -129,65 +181,90 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-client-title"
-      (click)="$event.stopPropagation()">
-
+      (click)="$event.stopPropagation()"
+    >
       <header class="modal-header">
         <div>
           <h2 id="create-client-title">Add Client</h2>
-          <p>Create a business account and its owner.</p>
+          <p>Create a business or personal account and its administrator.</p>
         </div>
 
-        <button type="button" class="close-btn"
-                [disabled]="saving"
-                aria-label="Close"
-                (click)="closeCreateForm()">×</button>
+        <button
+          type="button"
+          class="close-btn"
+          [disabled]="saving"
+          aria-label="Close"
+          (click)="closeCreateForm()"
+        >
+          ×
+        </button>
       </header>
 
       <form (ngSubmit)="createAccount()" #clientForm="ngForm">
         <label>
-          Business Name
-          <input
-            name="businessName"
-            [(ngModel)]="form.name"
-            maxlength="180"
-            required
-            placeholder="Miami Auto Care" />
+          Account Type
+
+          <select name="accountType" [(ngModel)]="form.accountType" required>
+            <option value="BUSINESS">Business Account</option>
+            <option value="PERSONAL">Personal Account</option>
+          </select>
         </label>
 
         <label>
-          Owner Name
+          {{ form.accountType === 'PERSONAL' ? 'Account Name' : 'Business Name' }}
+
+          <input
+            name="accountName"
+            [(ngModel)]="form.name"
+            maxlength="180"
+            required
+            [placeholder]="form.accountType === 'PERSONAL' ? 'Michael Personal' : 'Miami Auto Care'"
+          />
+        </label>
+
+        <label>
+          {{ form.accountType === 'PERSONAL' ? 'Full Name' : 'Owner Name' }}
+
           <input
             name="ownerName"
             [(ngModel)]="form.ownerName"
             maxlength="255"
             required
-            placeholder="John Smith" />
+            placeholder="John Smith"
+          />
         </label>
 
         <label>
-          Owner Email
+          {{ form.accountType === 'PERSONAL' ? 'Email Address' : 'Owner Email' }}
+
           <input
             type="email"
             name="ownerEmail"
             [(ngModel)]="form.ownerEmail"
+            maxlength="255"
             required
             email
-            placeholder="john@example.com" />
+            autocomplete="off"
+            placeholder="john@example.com"
+          />
         </label>
 
         <label>
-          Owner Phone (E.164)
+          Phone Number (E.164)
+
           <input
             type="tel"
             name="ownerPhone"
             [(ngModel)]="form.ownerPhone"
             required
             pattern="^\+[1-9][0-9]{7,14}$"
-            placeholder="+13055550123" />
+            placeholder="+13055550123"
+          />
         </label>
 
         <label>
           Temporary Password
+
           <input
             type="password"
             name="password"
@@ -195,23 +272,26 @@
             minlength="12"
             required
             autocomplete="new-password"
-            placeholder="At least 12 characters" />
+            placeholder="At least 12 characters"
+          />
         </label>
 
         <p class="form-note">
-          The account will be created without an assigned
-          Telnyx number. Call handling must be configured separately.
+          The account will be created without an assigned Telnyx number. Call handling must be
+          configured separately. The registered email cannot be changed in Settings.
         </p>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary"
-                  [disabled]="saving"
-                  (click)="closeCreateForm()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="saving"
+            (click)="closeCreateForm()"
+          >
             Cancel
           </button>
 
-          <button type="submit" class="btn btn-primary"
-                  [disabled]="clientForm.invalid || saving">
+          <button type="submit" class="btn btn-primary" [disabled]="clientForm.invalid || saving">
             {{ saving ? 'Creating...' : 'Create Client' }}
           </button>
         </div>
@@ -219,3 +299,98 @@
     </section>
   </div>
 }
+
+
+@if (lockTarget) {
+  <div
+    class="modal-backdrop"
+    (click)="closeLockModal()">
+
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lock-client-title"
+      (click)="$event.stopPropagation()">
+
+      <header class="modal-header">
+        <div>
+          <h2 id="lock-client-title">
+            Administrative Restriction
+          </h2>
+
+          <p>{{ lockTarget.name }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="close-btn"
+          [disabled]="lockSaving"
+          aria-label="Close"
+          (click)="closeLockModal()">
+          ×
+        </button>
+      </header>
+
+      <form (ngSubmit)="saveLock()">
+        <label>
+          Restriction Type
+
+          <select
+            name="lockMode"
+            [(ngModel)]="lockMode"
+            [disabled]="lockSaving"
+            required>
+            <option value="PURCHASES">
+              Block Purchases
+            </option>
+            <option value="SERVICE">
+              Suspend Service
+            </option>
+            <option value="FULL">
+              Full Account Lock
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Reason
+
+          <textarea
+            name="lockReason"
+            [(ngModel)]="lockReason"
+            [disabled]="lockSaving"
+            required
+            maxlength="500"
+            rows="4"
+            placeholder="Explain the reason for this restriction">
+          </textarea>
+        </label>
+
+        <p class="form-note">
+          Administrative restrictions can only be removed
+          by a Super Admin. Changes will be recorded
+          in the audit log.
+        </p>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="lockSaving"
+            (click)="closeLockModal()">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="lockSaving || !lockReason.trim()">
+            {{ lockSaving ? 'Saving...' : 'Apply Restriction' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
