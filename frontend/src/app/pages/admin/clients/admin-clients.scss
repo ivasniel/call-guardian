@@ -473,3 +473,17 @@ td {
     background: #326dcf;
   }
 }
+
+.add-phone-action {
+  background: #176b58;
+  color: #fff;
+  border: 1px solid #248a70;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1b826a;
+  }
+}

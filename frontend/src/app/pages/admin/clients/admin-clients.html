@@ -134,6 +134,9 @@
                     <button type="button" class="courtesy-action" (click)="openCourtesy(account)">
                       Manage Plan
                     </button>
+                    <button type="button" class="add-phone-action" (click)="openAddPhone(account)">
+                      + Add Number
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -391,5 +394,12 @@
     [accountName]="courtesyAccountName"
     (closed)="closeCourtesy()"
     (updated)="onCourtesyUpdated()"
+  />
+}
+@if (phoneAccountId !== null) {
+  <app-add-phone-number-dialog
+    [accountId]="phoneAccountId"
+    [accountName]="phoneAccountName"
+    (closed)="closeAddPhone()"
   />
 }

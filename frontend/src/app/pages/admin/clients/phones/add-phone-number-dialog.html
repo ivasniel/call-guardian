@@ -1,0 +1,238 @@
+<div class="phone-dialog-backdrop" (click)="close()">
+  <section
+    class="phone-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Add phone number"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="phone-dialog-header">
+      <div>
+        <p class="eyebrow">SUPER ADMIN · TELNYX</p>
+        <h2>Add Phone Number</h2>
+        <p class="subtitle">{{ accountName }}</p>
+      </div>
+
+      <button type="button" class="close-btn" (click)="close()" aria-label="Close">×</button>
+    </header>
+
+    <div class="search-section">
+      <div class="search-mode-tabs">
+        <button
+          type="button"
+          [class.active]="searchMode === 'QUICK'"
+          (click)="setSearchMode('QUICK')"
+        >
+          Quick Search
+        </button>
+
+        <button
+          type="button"
+          [class.active]="searchMode === 'ADVANCED'"
+          (click)="setSearchMode('ADVANCED')"
+        >
+          Advanced Search
+        </button>
+      </div>
+
+      @if (searchMode === 'QUICK') {
+        <label for="quickAreaCode"> Popular area codes </label>
+
+        <div class="search-controls">
+          <select id="quickAreaCode" name="quickAreaCode" [(ngModel)]="areaCode">
+            <option value="305">305 — Miami, FL</option>
+            <option value="786">786 — Miami, FL</option>
+            <option value="645">645 — Miami, FL</option>
+            <option value="407">407 — Orlando, FL</option>
+            <option value="813">813 — Tampa, FL</option>
+            <option value="212">212 — New York, NY</option>
+            <option value="213">213 — Los Angeles, CA</option>
+            <option value="713">713 — Houston, TX</option>
+          </select>
+
+          <button type="button" class="btn-search" [disabled]="loading" (click)="search()">
+            {{ loading ? 'Searching...' : 'Search Numbers' }}
+          </button>
+        </div>
+      }
+
+      @if (searchMode === 'ADVANCED') {
+        <div class="advanced-fields">
+          <div class="form-field">
+            <label>Country</label>
+            <div class="country-locked">United States (US) — Only</div>
+          </div>
+
+          <div class="advanced-grid">
+            <div class="form-field">
+              <label for="advancedState">State</label>
+
+              <select id="advancedState" name="advancedState" [(ngModel)]="advancedState">
+                <option value="">Any state</option>
+
+                @for (state of usStates; track state[0]) {
+                  <option [value]="state[0]">
+                    {{ state[1] }}
+                  </option>
+                }
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="advancedCity">City / Locality</label>
+
+              <input
+                id="advancedCity"
+                name="advancedCity"
+                type="text"
+                maxlength="100"
+                [(ngModel)]="advancedCity"
+                placeholder="e.g. Orlando"
+              />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="advancedAreaCode"> Area code (optional) </label>
+
+            <input
+              id="advancedAreaCode"
+              name="advancedAreaCode"
+              type="text"
+              inputmode="numeric"
+              maxlength="3"
+              [(ngModel)]="advancedAreaCode"
+              placeholder="e.g. 407"
+            />
+          </div>
+
+          <label class="alternative-toggle">
+            <input type="checkbox" name="includeAlternatives" [(ngModel)]="includeAlternatives" />
+            Include alternative results when exact matches are unavailable
+          </label>
+        </div>
+
+        <button
+          type="button"
+          class="btn-search advanced-search-button"
+          [disabled]="loading"
+          (click)="search()"
+        >
+          {{ loading ? 'Searching...' : 'Search Numbers' }}
+        </button>
+      }
+
+      <p class="hint">
+        Only United States phone numbers are supported. Availability depends on the Telnyx
+        inventory.
+      </p>
+    </div>
+
+    @if (loading) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Searching available phone numbers...</p>
+        <small>Checking live Telnyx inventory</small>
+      </div>
+    }
+
+    @if (error) {
+      <div class="message error">{{ error }}</div>
+    }
+
+    @if (result && !loading) {
+      <div class="availability-summary">
+        <span> {{ result.total }} numbers found </span>
+
+        <span>
+          {{ result.eligibility.remainingNumbers }}
+          available slot(s)
+        </span>
+      </div>
+
+      @if (result.areaCode && result.exactMatches === 0 && result.total > 0) {
+        <div class="message warning">
+          No exact matches for area code {{ areaCode }}. Showing alternatives provided by Telnyx.
+        </div>
+      }
+
+      <div class="numbers-list">
+        @for (number of result.numbers; track number.phoneNumber) {
+          <button
+            type="button"
+            class="number-card"
+            [class.selected]="isSelected(number)"
+            [disabled]="!number.supportsVoice"
+            (click)="selectNumber(number)"
+          >
+            <div class="number-information">
+              <strong>{{ formatNumber(number.phoneNumber) }}</strong>
+
+              <div class="number-badges">
+                <span class="feature" *ngIf="number.supportsVoice"> Voice </span>
+
+                <span class="feature" *ngIf="number.supportsSms"> SMS </span>
+
+                <span class="feature" *ngIf="number.supportsMms"> MMS </span>
+
+                <span class="area-badge" [class.alternative]="!number.exactAreaCode">
+                  {{ number.actualAreaCode }}
+                  {{ number.exactAreaCode ? 'Exact' : 'Alternative' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="number-price">
+              <strong> {{ price(number.costInformation?.monthly_cost) }}/mo </strong>
+
+              <small>
+                {{ price(number.costInformation?.upfront_cost) }}
+                upfront
+              </small>
+            </div>
+          </button>
+        }
+      </div>
+
+      @if (result.total === 0) {
+        <div class="message">No phone numbers found. Try another area code.</div>
+      }
+    }
+
+    @if (selectedNumber) {
+      <div class="selected-summary">
+        <div>
+          <small>Selected number</small>
+          <strong>
+            {{ formatNumber(selectedNumber.phoneNumber) }}
+          </strong>
+        </div>
+
+        <div>
+          <small>Telnyx upfront cost</small>
+          <strong>
+            {{ price(selectedNumber.costInformation?.upfront_cost) }}
+          </strong>
+        </div>
+
+        <div>
+          <small>Telnyx monthly cost</small>
+          <strong>
+            {{ price(selectedNumber.costInformation?.monthly_cost) }}
+          </strong>
+        </div>
+      </div>
+    }
+
+    <div class="purchase-notice">
+      This is a live Telnyx inventory search. No number has been purchased or reserved. Real
+      purchases will require explicit Super Admin authorization.
+    </div>
+
+    <footer class="dialog-actions">
+      <button type="button" class="btn-secondary" (click)="close()">Close</button>
+
+      <button type="button" class="btn-purchase" disabled>Purchase Number — Not Enabled Yet</button>
+    </footer>
+  </section>
+</div>

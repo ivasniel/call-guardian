@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { finalize } from 'rxjs';
+import { AddPhoneNumberDialog } from './phones/add-phone-number-dialog';
 
 import {
   AccountType,
@@ -18,7 +19,7 @@ import { CourtesyPlanDialog } from '../plans/courtesy-plan-dialog';
 @Component({
   selector: 'app-admin-clients',
   standalone: true,
-  imports: [FormsModule, DatePipe, CourtesyPlanDialog],
+  imports: [FormsModule, DatePipe, CourtesyPlanDialog, AddPhoneNumberDialog],
   templateUrl: './admin-clients.html',
   styleUrl: './admin-clients.scss',
 })
@@ -68,6 +69,19 @@ export class AdminClients implements OnInit {
   onCourtesyUpdated() {
     this.loadAccounts();
   }
+
+  phoneAccountId: number | null = null;
+phoneAccountName = '';
+
+openAddPhone(account: AdminAccount): void {
+  this.phoneAccountId = account.id;
+  this.phoneAccountName = account.name;
+}
+
+closeAddPhone(): void {
+  this.phoneAccountId = null;
+  this.phoneAccountName = '';
+}
 
   ngOnInit(): void {
     this.loadAccounts();

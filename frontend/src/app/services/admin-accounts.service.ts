@@ -1,17 +1,90 @@
+
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'CANCELED';
+// ============================================================
+// ACCOUNT TYPES
+// ============================================================
 
-export type AccountType = 'BUSINESS' | 'PERSONAL';
+export type AccountStatus =
+  | 'ACTIVE'
+  | 'SUSPENDED'
+  | 'CANCELED';
 
-export type AdminLockMode = 'NONE' | 'PURCHASES' | 'SERVICE' | 'FULL';
+export type AccountType =
+  | 'BUSINESS'
+  | 'PERSONAL';
+
+export type AdminLockMode =
+  | 'NONE'
+  | 'PURCHASES'
+  | 'SERVICE'
+  | 'FULL';
+
+// ============================================================
+// PHONE NUMBER SEARCH
+// ============================================================
+
+export interface AvailablePhoneNumber {
+  phoneNumber: string;
+  exactAreaCode: boolean;
+  actualAreaCode: string;
+
+  features: string[];
+
+  supportsVoice: boolean;
+  supportsSms: boolean;
+  supportsMms: boolean;
+
+  costInformation: {
+    monthly_cost?: string;
+    upfront_cost?: string;
+    currency?: string;
+  } | null;
+
+  regionInformation: unknown[];
+  reservable: boolean;
+}
+
+export interface PhoneNumberSearchFilters {
+  areaCode?: string;
+  state?: string;
+  city?: string;
+  bestEffort?: boolean;
+}
+
+export interface AvailableNumbersResponse {
+  accountId: number;
+  areaCode: string;
+  countryCode: string;
+  bestEffort: boolean;
+  total: number;
+  exactMatches: number;
+
+  eligibility: {
+    allowed: boolean;
+    accountId: number;
+    subscriptionId: number;
+    source: 'PAID' | 'ADMIN_COURTESY';
+    maxNumbers: number;
+    currentNumbers: number;
+    remainingNumbers: number;
+    requiresRealPurchaseApproval: boolean;
+  };
+
+  numbers: AvailablePhoneNumber[];
+}
+
+// ============================================================
+// ADMIN ACCOUNTS
+// ============================================================
 
 export interface AdminAccount {
   id: number;
   name: string;
   slug: string;
+
   accountType: AccountType;
   status: AccountStatus;
 
@@ -21,6 +94,7 @@ export interface AdminAccount {
 
   createdAt: string;
   updatedAt: string;
+
   totalUsers: number;
   totalNumbers: number;
   totalCalls: number;
@@ -28,6 +102,7 @@ export interface AdminAccount {
 
 export interface AdminAccountsResponse {
   items: AdminAccount[];
+
   pagination: {
     page: number;
     pageSize: number;
@@ -51,6 +126,7 @@ export interface CreatedAdminAccount {
   accountType: AccountType;
   slug: string;
   status: AccountStatus;
+
   owner: {
     id: number;
     name: string;
@@ -58,6 +134,10 @@ export interface CreatedAdminAccount {
     phone: string;
   };
 }
+
+// ============================================================
+// COURTESY PLANS
+// ============================================================
 
 export interface CourtesyPlanInput {
   durationDays: number;
@@ -73,20 +153,34 @@ export interface AccountSubscription {
   id: number;
   account_id: number;
   plan_id: number;
+
   source: 'PAID' | 'ADMIN_COURTESY';
-  status: 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | 'CANCELED';
+
+  status:
+    | 'PENDING'
+    | 'ACTIVE'
+    | 'PAST_DUE'
+    | 'EXPIRED'
+    | 'CANCELED';
+
   starts_at: string;
   ends_at: string;
+
   max_users: number;
   max_numbers: number;
+
   included_calls: number;
   included_minutes: number;
+
   allow_additional_numbers: number | boolean;
+
   granted_by: number | null;
   grant_reason: string | null;
+
   plan_code: string;
   plan_name: string;
   account_name: string;
+
   currentlyActive: boolean;
 }
 
@@ -102,10 +196,21 @@ export interface CourtesyActionResponse {
   subscription: AccountSubscription;
 }
 
-@Injectable({ providedIn: 'root' })
+// ============================================================
+// ADMIN ACCOUNTS SERVICE
+// ============================================================
+
+@Injectable({
+  providedIn: 'root',
+})
 export class AdminAccountsService {
   private readonly http = inject(HttpClient);
+
   private readonly apiUrl = '/admin/accounts';
+
+  // ==========================================================
+  // CLIENT MANAGEMENT
+  // ==========================================================
 
   list(params: {
     page: number;
@@ -114,26 +219,56 @@ export class AdminAccountsService {
     status?: string;
     accountType?: AccountType | 'ALL';
   }): Observable<AdminAccountsResponse> {
-    let httpParams = new HttpParams().set('page', params.page).set('pageSize', params.pageSize);
+
+    let httpParams = new HttpParams()
+      .set('page', String(params.page))
+      .set('pageSize', String(params.pageSize));
 
     if (params.search?.trim()) {
-      httpParams = httpParams.set('search', params.search.trim());
+      httpParams = httpParams.set(
+        'search',
+        params.search.trim(),
+      );
     }
 
     if (params.status && params.status !== 'ALL') {
-      httpParams = httpParams.set('status', params.status);
+      httpParams = httpParams.set(
+        'status',
+        params.status,
+      );
     }
 
-    if (params.accountType && params.accountType !== 'ALL') {
-      httpParams = httpParams.set('accountType', params.accountType);
+    if (
+      params.accountType &&
+      params.accountType !== 'ALL'
+    ) {
+      httpParams = httpParams.set(
+        'accountType',
+        params.accountType,
+      );
     }
 
-    return this.http.get<AdminAccountsResponse>(this.apiUrl, { params: httpParams });
+    return this.http.get<AdminAccountsResponse>(
+      this.apiUrl,
+      {
+        params: httpParams,
+      },
+    );
   }
 
-  create(payload: CreateAdminAccountRequest): Observable<CreatedAdminAccount> {
-    return this.http.post<CreatedAdminAccount>(this.apiUrl, payload);
+  create(
+    payload: CreateAdminAccountRequest,
+  ): Observable<CreatedAdminAccount> {
+
+    return this.http.post<CreatedAdminAccount>(
+      this.apiUrl,
+      payload,
+    );
   }
+
+  // ==========================================================
+  // ADMIN ACCOUNT LOCKS
+  // ==========================================================
 
   lockAccount(
     accountId: number,
@@ -145,12 +280,19 @@ export class AdminAccountsService {
     mode: string;
     reason: string;
   }> {
+
     return this.http.put<{
       accountId: number;
       locked: boolean;
       mode: string;
       reason: string;
-    }>(`${this.apiUrl}/${accountId}/lock`, { mode, reason });
+    }>(
+      `${this.apiUrl}/${accountId}/lock`,
+      {
+        mode,
+        reason,
+      },
+    );
   }
 
   unlockAccount(
@@ -161,38 +303,133 @@ export class AdminAccountsService {
     locked: boolean;
     mode: string;
   }> {
+
     return this.http.put<{
       accountId: number;
       locked: boolean;
       mode: string;
-    }>(`${this.apiUrl}/${accountId}/unlock`, { reason });
+    }>(
+      `${this.apiUrl}/${accountId}/unlock`,
+      {
+        reason,
+      },
+    );
   }
 
-  getSubscription(accountId: number) {
-    return this.http.get<AccountSubscriptionResponse>(`/admin/accounts/${accountId}/subscription`);
+  // ==========================================================
+  // SUBSCRIPTIONS
+  // ==========================================================
+
+  getSubscription(
+    accountId: number,
+  ): Observable<AccountSubscriptionResponse> {
+
+    return this.http.get<AccountSubscriptionResponse>(
+      `${this.apiUrl}/${accountId}/subscription`,
+    );
   }
 
-  grantCourtesy(accountId: number, input: CourtesyPlanInput) {
-    return this.http.post(`/admin/accounts/${accountId}/courtesy`, input);
-  }
+  // ==========================================================
+  // COURTESY PLAN MANAGEMENT
+  // ==========================================================
 
-  extendCourtesy(accountId: number, additionalDays: number, reason: string) {
-    return this.http.put<CourtesyActionResponse>(`/admin/accounts/${accountId}/courtesy/extend`, {
-      additionalDays,
-      reason,
-    });
-  }
+  grantCourtesy(
+    accountId: number,
+    input: CourtesyPlanInput,
+  ): Observable<unknown> {
 
-  updateCourtesyLimits(accountId: number, input: Omit<CourtesyPlanInput, 'durationDays'>) {
-    return this.http.put<CourtesyActionResponse>(
-      `/admin/accounts/${accountId}/courtesy/limits`,
+    return this.http.post<unknown>(
+      `${this.apiUrl}/${accountId}/courtesy`,
       input,
     );
   }
 
-  revokeCourtesy(accountId: number, reason: string) {
-    return this.http.put<CourtesyActionResponse>(`/admin/accounts/${accountId}/courtesy/revoke`, {
-      reason,
-    });
+  extendCourtesy(
+    accountId: number,
+    additionalDays: number,
+    reason: string,
+  ): Observable<CourtesyActionResponse> {
+
+    return this.http.put<CourtesyActionResponse>(
+      `${this.apiUrl}/${accountId}/courtesy/extend`,
+      {
+        additionalDays,
+        reason,
+      },
+    );
+  }
+
+  updateCourtesyLimits(
+    accountId: number,
+    input: Omit<CourtesyPlanInput, 'durationDays'>,
+  ): Observable<CourtesyActionResponse> {
+
+    return this.http.put<CourtesyActionResponse>(
+      `${this.apiUrl}/${accountId}/courtesy/limits`,
+      input,
+    );
+  }
+
+  revokeCourtesy(
+    accountId: number,
+    reason: string,
+  ): Observable<CourtesyActionResponse> {
+
+    return this.http.put<CourtesyActionResponse>(
+      `${this.apiUrl}/${accountId}/courtesy/revoke`,
+      {
+        reason,
+      },
+    );
+  }
+
+  // ==========================================================
+  // TELNYX PHONE NUMBER SEARCH
+  // QUICK SEARCH + ADVANCED SEARCH
+  // ==========================================================
+
+  searchAvailableNumbers(
+    accountId: number,
+    filters: PhoneNumberSearchFilters,
+  ): Observable<AvailableNumbersResponse> {
+
+    let params = new HttpParams();
+
+    // Quick or advanced area code search.
+    if (filters.areaCode?.trim()) {
+      params = params.set(
+        'areaCode',
+        filters.areaCode.trim(),
+      );
+    }
+
+    // Advanced search by US state.
+    if (filters.state?.trim()) {
+      params = params.set(
+        'state',
+        filters.state.trim().toUpperCase(),
+      );
+    }
+
+    // Advanced search by city/locality.
+    if (filters.city?.trim()) {
+      params = params.set(
+        'city',
+        filters.city.trim(),
+      );
+    }
+
+    // Strict results or Telnyx alternatives.
+    params = params.set(
+      'bestEffort',
+      String(filters.bestEffort ?? false),
+    );
+
+    return this.http.get<AvailableNumbersResponse>(
+      `${this.apiUrl}/${accountId}/available-numbers`,
+      {
+        params,
+      },
+    );
   }
 }
